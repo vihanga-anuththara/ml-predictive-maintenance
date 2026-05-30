@@ -1,0 +1,289 @@
+/* CompanyDevices Styles */
+.devices-container {
+    padding: 32px;
+    max-width: 1400px;
+    width: 100%;
+}
+
+/* Device Info Cell */
+.device-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.device-icon.blue {
+    color: #2563eb;
+    background-color: #eff6ff;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.device-icon.purple {
+    color: #9333ea;
+    background-color: #f3e8ff;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.device-icon.orange {
+    color: #ea580c;
+    background-color: #ffedd5;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.device-icon.green {
+    color: #16a34a;
+    background-color: #dcfce3;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.device-icon.gray {
+    color: #4b5563;
+    background-color: #f3f4f6;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.device-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.device-id {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-family: monospace;
+}
+
+/* Typography Classes */
+.font-medium {
+    font-weight: 500;
+}
+
+.font-mono {
+    font-family: monospace;
+}
+
+.text-dark {
+    color: #111827;
+}
+
+.text-muted {
+    color: #6b7280;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: inline-block;
+}
+
+.status-badge.healthy {
+    background-color: #ecfdf5;
+    color: #10b981;
+}
+
+.status-badge.warning {
+    background-color: #fffbeb;
+    color: #f59e0b;
+}
+
+.status-badge.critical {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
+
+.table-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.data-table th {
+    background-color: #f9fafb;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.empty-state {
+    padding: 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal Form Styles */
+.form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast-message {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 320px;
+    max-width: 400px;
+    pointer-events: auto;
+    border-left: 4px solid #3b82f6;
+    transform: translateX(120%);
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-message.success {
+    border-left-color: #10b981;
+}
+
+.toast-message.error {
+    border-left-color: #ef4444;
+}
+
+.toast-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.toast-message.success .toast-icon {
+    color: #10b981;
+}
+
+.toast-message.error .toast-icon {
+    color: #ef4444;
+}
+
+.toast-content {
+    flex-grow: 1;
+}
+
+.toast-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.toast-desc {
+    font-size: 0.85rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-close:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
