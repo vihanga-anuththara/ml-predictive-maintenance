@@ -1,0 +1,215 @@
+/* Reports Styles */
+.reports-container {
+    padding: 32px;
+    max-width: 1400px;
+    width: 100%;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    color: #111827;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+/* Templates Grid */
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.template-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.template-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: #d1d5db;
+}
+
+.template-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.template-icon.blue { background: #eff6ff; color: #2563eb; }
+.template-icon.purple { background: #f3e8ff; color: #9333ea; }
+.template-icon.green { background: #ecfdf5; color: #10b981; }
+.template-icon.orange { background: #fffbeb; color: #f59e0b; }
+
+.template-card h4 {
+    margin: 0 0 8px 0;
+    color: #111827;
+    font-size: 1.05rem;
+}
+
+.template-card p {
+    color: #6b7280;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+    flex: 1;
+}
+
+.generate-btn {
+   
+    padding: 8px 0;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: fit-content;      
+    white-space: nowrap;
+}
+
+.generate-btn:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    color: #111827;
+}
+
+/* Recent Reports Section */
+.recent-reports-section {
+    margin-top: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 0.9rem;
+    background: white;
+    padding: 6px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.table-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.reports-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.reports-table th {
+    background-color: #f9fafb;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.reports-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.reports-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.report-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.text-muted { color: #6b7280; font-size: 0.9rem; }
+.font-medium { font-weight: 500; }
+.text-dark { color: #111827; }
+
+.report-type-badge {
+    background: #f3f4f6;
+    color: #4b5563;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.format-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.format-badge.pdf { background: #fee2e2; color: #dc2626; }
+.format-badge.csv { background: #dcfce3; color: #16a34a; }
+
+.download-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    color: #3b82f6;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.download-btn:hover {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+/* Generate Button */
+.generate-btn {
+    width: 100%;
+    padding: 10px 0;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 15px;
+}
+
+.generate-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}

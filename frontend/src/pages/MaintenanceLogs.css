@@ -1,0 +1,162 @@
+/* MaintenanceLogs Styles */
+.logs-container {
+    padding: 32px;
+    max-width: 1400px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Secondary Button (Export) */
+.btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.status-filter {
+    padding: 10px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background-color: white;
+    color: #374151;
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Table Card */
+.logs-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.logs-table th {
+    background-color: #f9fafb;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.logs-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.logs-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.logs-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Cell Styles */
+.log-id {
+    font-family: monospace;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.date-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+.icon-muted {
+    color: #9ca3af;
+}
+
+.device-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.95rem;
+}
+
+.company-name {
+    color: #6b7280;
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
+.issue-text {
+    color: #374151;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.technician-name {
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+/* Log Status Badges */
+.log-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.log-status-badge.completed {
+    background-color: #ecfdf5;
+    color: #10b981;
+}
+
+.log-status-badge.in-progress {
+    background-color: #eff6ff;
+    color: #3b82f6;
+}
+
+.log-status-badge.pending {
+    background-color: #fffbeb;
+    color: #f59e0b;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.icon-btn:hover {
+    background: #f3f4f6;
+    color: #4b5563;
+}
