@@ -26,12 +26,24 @@ function Contracts() {
         setTimeout(() => setNotification(null), 4000);
     };
 
+    // Calculation Status
     const calculateStatus = (endDateString) => {
         if (!endDateString) return 'Unknown';
-        const today = new Date(); today.setHours(0, 0, 0, 0); 
-        const diffDays = Math.ceil((new Date(endDateString) - today) / (1000 * 60 * 60 * 24)); 
-        if (diffDays < 0) return 'Expired';
-        if (diffDays <= 30) return 'Expiring Soon'; 
+        
+        // Today (00:00:00)
+        const today = new Date(); 
+        today.setHours(0, 0, 0, 0); 
+
+        // End date (00:00:00)
+        const endDate = new Date(endDateString);
+        endDate.setHours(0, 0, 0, 0);
+
+        // Calculate days
+        const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)); 
+        
+        if (diffDays < 0) return 'Expired';       // Days<0  Expired
+        if (diffDays === 0) return 'Expires Today'; // Expires today
+        if (diffDays <= 30) return 'Expiring Soon'; // Days <30 Expiring soon
         return 'Active';
     };
 
@@ -86,52 +98,64 @@ function Contracts() {
         } catch (error) { showToast('error', 'Save Failed', 'An error occurred while saving.'); }
     };
 
-    if (currentRole !== 'Admin') {
-        return (
-            <div className="dashboard-root"><Sidebar /><main className="main-content"><div className="restricted-view"><ShieldAlert size={72} color="#ef4444" /><h2>Access Restricted</h2>
-             <p style={{ color: '#6b7280', maxWidth: '400px', margin: '0 auto', lineHeight: '1.6' }}>
-                            You do not have the required permissions to view or manage Service Contracts. Please contact a System Administrator.
-                        </p>
-                        </div></main></div>
-            
-        );
-    }
-
     return (
         <div className="dashboard-root">
             <Sidebar />
             <main className="main-content">
                 <div className="contracts-container">
                     <div className="page-header">
-                        <div className="header-text"><h2>Service Contracts</h2>
-                        <p>Manage client agreements, billing cycles, and renewals.</p></div>
-                        <button className="btn-primary" onClick={handleAddClick}><Plus size={18} /> Add Contract</button>
+                        <div className="header-text">
+                            <h2>Service Contracts</h2>
+                            <p>Manage client agreements, billing cycles, and renewals.</p>
+                        </div>
+                        {currentRole === 'Admin' && (
+                             <button className="btn-primary" onClick={handleAddClick}><Plus size={18} /> Add Contract</button>
+                        )}
                     </div>
-                    <div className="controls-bar">
-                        <div className="search-box"><Search size={18} /><input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-                    </div>
-                    <div className="table-card">
-                        <table className="data-table">
-                            <thead><tr><th>ID</th><th>Company</th><th>Duration</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                {filteredContracts.map((contract) => (
-                                    <tr key={contract.id}>
-                                        <td>{contract.displayId}</td><td>{contract.company}</td><td>{contract.startDate} to {contract.endDate}</td>
-                                        <td>{contract.value}</td><td><span className={`status-badge ${contract.status.toLowerCase().replace(' ', '-')}`}>{contract.status}</span></td>
-                                        <td>
-                                            <div className="action-buttons">
-                                                <button className="action-btn edit" onClick={() => handleEditClick(contract)}><Edit size={16} /></button>
-                                                <button className="action-btn delete" onClick={() => confirmDelete(contract.id)}><Trash2 size={16} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    
+                    {currentRole !== 'Admin' ? (
+                        <div className="restricted-view" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', background: '#fff', borderRadius: '12px', marginTop: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <ShieldAlert size={64} color="#ef4444" />
+                            <h2 style={{ marginTop: '16px', color: '#111827', fontSize: '1.5rem' }}>Access Restricted</h2>
+                            <p style={{ color: '#6b7280', maxWidth: '400px', margin: '8px auto 0', lineHeight: '1.6' }}>
+                                You do not have the required permissions to view or manage Service Contracts. Please contact a System Administrator.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="controls-bar">
+                                <div className="search-box"><Search size={18} /><input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+                            </div>
+                            <div className="table-card">
+                                <table className="data-table">
+                                    <thead><tr><th>ID</th><th>Company</th><th>Duration</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        {filteredContracts.map((contract) => (
+                                            <tr key={contract.id}>
+                                                <td>{contract.displayId}</td><td>{contract.company}</td><td>{contract.startDate} to {contract.endDate}</td>
+                                                <td>{contract.value}</td>
+                                                <td>
+                                                    <span className={`status-badge ${contract.status.toLowerCase().replace(' ', '-')}`}>
+                                                        {contract.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="action-buttons">
+                                                        <button className="action-btn edit" onClick={() => handleEditClick(contract)}><Edit size={16} /></button>
+                                                        <button className="action-btn delete" onClick={() => confirmDelete(contract.id)}><Trash2 size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
                 </div>
             </main>
 
+            {/* Modals and Notifications */}
             {isModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content">
@@ -147,18 +171,8 @@ function Contracts() {
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label>Contract Value</label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="e.g. LKR 10,000" 
-                                            required 
-                                            value={formData.value}
-                                            onChange={(e) => setFormData({...formData, value: e.target.value})}
-                                        />
+                                        <input type="text" placeholder="e.g. LKR 10,000" required value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} />
                                     </div>
-                                </div>
-                                <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <AlertTriangle size={14} color="#f59e0b" />
-                                    <span>Status is calculated automatically based on the End Date.</span>
                                 </div>
                             </div>
                             <div className="modal-footer"><button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>Cancel</button><button type="submit" className="btn-primary">Save</button></div>
