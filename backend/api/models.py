@@ -10,6 +10,10 @@ class SystemUser(models.Model):
     email = models.EmailField(unique=True) 
     role = models.CharField(max_length=50, default='Technician')
     status = models.CharField(max_length=50, default='Active')
+    
+    # 2Fa model
+    totp_secret = models.CharField(max_length=32, blank=True, null=True) 
+    is_2fa_enabled = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.name} ({self.role})"
