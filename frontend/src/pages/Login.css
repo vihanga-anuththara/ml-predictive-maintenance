@@ -48,7 +48,6 @@ body,
     -webkit-font-smoothing: antialiased;
 }
 
-/* Root Layout */
 .login-root {
     display: flex;
     min-height: 100vh;
@@ -367,6 +366,44 @@ body,
 .login-otp-input:focus {
     border-color: var(--blue-500);
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+/* Recovery Input Style */
+.login-recovery-input {
+    width: 100%;
+    font-family: monospace;
+    font-size: 1.1rem;
+    text-align: center;
+    letter-spacing: 0.1em;
+    padding: 16px 10px;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    color: var(--gray-900);
+    font-weight: 600;
+    outline: none;
+    transition: all var(--transition);
+}
+
+.login-recovery-input:focus {
+    border-color: #d97706;
+    box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.15);
+}
+
+/* Toggle Link Style */
+.recovery-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--blue-600);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 4px;
+}
+
+.recovery-toggle-btn:hover {
+    color: var(--blue-800);
+    text-decoration: underline;
 }
 
 .btn-cancel {
