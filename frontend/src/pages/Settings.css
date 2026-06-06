@@ -480,3 +480,24 @@ input:checked+.slider:before {
         opacity: 1;
     }
 }
+
+/* 2FA Input Style in Settings Modal */
+.settings-otp-input {
+    width: 100%;
+    font-family: monospace;
+    font-size: 1.75rem;
+    text-align: center;
+    letter-spacing: 0.4em;
+    padding: 12px 0;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    color: var(--gray-900);
+    font-weight: 700;
+    outline: none;
+    transition: all var(--transition);
+}
+
+.settings-otp-input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+}
