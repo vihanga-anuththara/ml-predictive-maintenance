@@ -175,7 +175,6 @@ body,
     max-width: 400px;
 }
 
-/* Form Animation */
 .form-animate {
     animation: fadeUp 0.32s ease forwards;
 }
@@ -217,7 +216,6 @@ body,
     color: var(--gray-500);
 }
 
-/* Fields */
 .field {
     display: flex;
     flex-direction: column;
@@ -260,7 +258,6 @@ body,
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), var(--shadow-sm);
 }
 
-/* Show/Hide Password Wrapper */
 .password-wrapper {
     position: relative;
     display: flex;
@@ -288,7 +285,6 @@ body,
     color: var(--blue-600);
 }
 
-/* Buttons */
 .btn-primary {
     display: flex;
     align-items: center;
@@ -310,24 +306,113 @@ body,
     letter-spacing: 0.01em;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background: var(--blue-700);
     box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
     transform: translateY(-1px);
 }
 
-.btn-primary:active {
+.btn-primary:active:not(:disabled) {
     transform: translateY(0);
     box-shadow: var(--shadow-blue);
 }
 
-/* Toast Notifications */
+.btn-primary:disabled {
+    background: var(--blue-400);
+    cursor: not-allowed;
+    box-shadow: none;
+}
 
+/* 2FA Modal Styles */
+.login-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.login-modal-content {
+    background: white;
+    padding: 32px 24px;
+    border-radius: var(--radius-md);
+    width: 90%;
+    max-width: 380px;
+    box-shadow: var(--shadow-md);
+    animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-otp-input {
+    width: 100%;
+    font-family: monospace;
+    font-size: 2rem;
+    text-align: center;
+    letter-spacing: 0.5em;
+    padding: 16px 0;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    color: var(--gray-900);
+    font-weight: 700;
+    outline: none;
+    transition: all var(--transition);
+}
+
+.login-otp-input:focus {
+    border-color: var(--blue-500);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.btn-cancel {
+    background: white;
+    border: 1.5px solid var(--gray-200);
+    color: var(--gray-700);
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-cancel:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Toast Notifications */
 .login-toast-container {
     position: fixed;
     top: 24px;
     right: 24px;
-    z-index: 9999;
+    z-index: 10000;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -396,9 +481,6 @@ body,
     padding: 4px;
     border-radius: 4px;
     transition: background 0.2s, color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .login-toast-close:hover {
