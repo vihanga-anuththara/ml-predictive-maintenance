@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CompanyViewSet, DeviceViewSet, DeviceHealthLogViewSet, MaintenanceRecordViewSet, 
     predict_device_risk, RegisterView, LoginView, ContractViewSet, TechnicianTaskViewSet, 
-    SystemUserViewSet, change_password
+    SystemUserViewSet, change_password, VerifyLoginOTPView, setup_2fa, verify_and_enable_2fa
 )
 
 # API Router for CRUD operations
@@ -25,4 +25,8 @@ urlpatterns = [
     path('predict-risk/', predict_device_risk, name='predict-risk'),
     path('device-risks/', get_device_risks, name='device-risks'),
     path('', include(router.urls)), # CRUD API Links
+    path('login/', LoginView.as_view(), name='login'),
+    path('login-verify-otp/', VerifyLoginOTPView.as_view(), name='login-verify-otp'),
+    path('setup-2fa/', setup_2fa, name='setup-2fa'),
+    path('verify-2fa/', verify_and_enable_2fa, name='verify-2fa'),
 ]
