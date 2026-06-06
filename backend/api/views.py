@@ -13,7 +13,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from datetime import date
 from google import genai 
-
 from .models import Company, Device, DeviceHealthLog, MaintenanceRecord, Contract, TechnicianTask, SystemUser
 from .serializers import (
     CompanySerializer, DeviceSerializer, DeviceHealthLogSerializer, 
@@ -83,7 +82,7 @@ class VerifyLoginOTPView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
         email = request.data.get('email')
-        code = request.data.get('code')
+        code = request.data.get('code', '').strip()
         
         user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
         if not user:
@@ -93,9 +92,11 @@ class VerifyLoginOTPView(APIView):
         if not sys_user or not sys_user.totp_secret:
             return Response({"error": "2FA is not setup"}, status=status.HTTP_400_BAD_REQUEST)
             
-        # Check OTP code
+        # Check OTP code OR Recovery Code (Secret)
         totp = pyotp.TOTP(sys_user.totp_secret)
-        if totp.verify(code):
+        
+        # Check recovery code (code == sys_user.totp_secret)
+        if totp.verify(code) or code == sys_user.totp_secret:
             refresh = RefreshToken.for_user(user)
             real_role = 'Admin' if user.is_staff or user.is_superuser else 'Technician'
             return Response({
@@ -141,6 +142,17 @@ def verify_and_enable_2fa(request):
         
     return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
 
+# 2FA Disable View (Toggle off)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def disable_2fa(request):
+    sys_user = SystemUser.objects.filter(email=request.user.email).first()
+    if sys_user:
+        sys_user.is_2fa_enabled = False
+        sys_user.totp_secret = None  # Reset 2FA
+        sys_user.save()
+        return Response({"message": "2FA disabled successfully."})
+    return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
