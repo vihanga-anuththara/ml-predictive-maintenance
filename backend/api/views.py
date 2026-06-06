@@ -1,5 +1,6 @@
 import os
 import joblib 
+import pyotp
 from django.db import transaction 
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -19,11 +20,9 @@ from .serializers import (
     MaintenanceRecordSerializer, ContractSerializer, TechnicianTaskSerializer, SystemUserSerializer
 )
 
-
 # Authentication and User Management Views
 class RegisterView(APIView):
     permission_classes = [AllowAny]
-
     def post(self, request):
         data = request.data
         email = data.get('email', '')
@@ -41,24 +40,33 @@ class RegisterView(APIView):
                 return Response({"error": "An account with this email already exists!"}, status=status.HTTP_400_BAD_REQUEST)
             
             user = User.objects.create_user(username=username, email=email, password=password, first_name=first_name, last_name=last_name)
-            
             if requested_role == 'Admin':
                 user.is_staff = True
                 user.is_superuser = False
                 user.save()
-            
             return Response({"message": "Account created successfully!"}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
-
     def post(self, request):
         email = request.data.get('username')
         password = request.data.get('password')
         user = authenticate(username=email, password=password)
+        
         if user:
+            # Check SystemUsers' 2FA status
+            sys_user = SystemUser.objects.filter(email=user.email).first()
+            
+            if sys_user and sys_user.is_2fa_enabled:
+                # Request OTP
+                return Response({
+                    "message": "OTP_REQUIRED", 
+                    "email": user.email
+                }, status=status.HTTP_200_OK)
+
+            # Give token access
             refresh = RefreshToken.for_user(user)
             real_role = 'Admin' if user.is_staff or user.is_superuser else 'Technician'
             return Response({
@@ -69,6 +77,70 @@ class LoginView(APIView):
             })
         else:
             return Response({"error": "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+# OTP Login View
+class VerifyLoginOTPView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        email = request.data.get('email')
+        code = request.data.get('code')
+        
+        user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
+        if not user:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        sys_user = SystemUser.objects.filter(email=user.email).first()
+        if not sys_user or not sys_user.totp_secret:
+            return Response({"error": "2FA is not setup"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Check OTP code
+        totp = pyotp.TOTP(sys_user.totp_secret)
+        if totp.verify(code):
+            refresh = RefreshToken.for_user(user)
+            real_role = 'Admin' if user.is_staff or user.is_superuser else 'Technician'
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'name': f"{user.first_name} {user.last_name}",
+                'role': real_role
+            })
+            
+        return Response({"error": "Invalid Authenticator Code"}, status=status.HTTP_400_BAD_REQUEST)
+
+# 2FA Setup View (QR Code)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def setup_2fa(request):
+    sys_user = SystemUser.objects.filter(email=request.user.email).first()
+    if not sys_user:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    if not sys_user.totp_secret:
+        sys_user.totp_secret = pyotp.random_base32()
+        sys_user.save()
+        
+    totp = pyotp.TOTP(sys_user.totp_secret)
+    # URL used to create QR Code
+    provisioning_uri = totp.provisioning_uri(name=sys_user.email, issuer_name="Predict Failures System")
+    
+    return Response({"qr_uri": provisioning_uri, "secret": sys_user.totp_secret})
+
+
+# 2FA Activate View
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_and_enable_2fa(request):
+    code = request.data.get('code')
+    sys_user = SystemUser.objects.filter(email=request.user.email).first()
+    
+    totp = pyotp.TOTP(sys_user.totp_secret)
+    if totp.verify(code):
+        sys_user.is_2fa_enabled = True
+        sys_user.save()
+        return Response({"message": "Two-Factor Authentication enabled successfully!"})
+        
+    return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -82,7 +154,7 @@ def change_password(request):
     user.save()
     return Response({"message": "Password updated successfully!"}, status=status.HTTP_200_OK)
 
-# CRUD Operations
+# SystemUser View
 class SystemUserViewSet(viewsets.ModelViewSet):
     queryset = SystemUser.objects.all()
     serializer_class = SystemUserSerializer
@@ -100,59 +172,53 @@ class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
 
-    # Company data delete
     def destroy(self, request, *args, **kwargs):
         try:
             company = self.get_object()
-            
-            with transaction.atomic(): # Safe delete
+            with transaction.atomic():
                 devices = Device.objects.filter(company=company)
-                
                 for device in devices:
                     DeviceHealthLog.objects.filter(device=device).delete()
                     MaintenanceRecord.objects.filter(device=device).delete()
                     TechnicianTask.objects.filter(device=device).delete()
                     device.delete() 
-                    
                 Contract.objects.filter(company=company).delete()
                 company.delete()
-                
             return Response({"message": "Successfully deleted!"}, status=status.HTTP_204_NO_CONTENT)
-            
         except Exception as e:
-            print(f"Database Delete Error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# Contract View
 class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.all()
     serializer_class = ContractSerializer
 
+# Device View
 class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
 
+# Technician Task View
 class TechnicianTaskViewSet(viewsets.ModelViewSet):
     queryset = TechnicianTask.objects.all()
     serializer_class = TechnicianTaskSerializer
 
+# Device Health Log View
 class DeviceHealthLogViewSet(viewsets.ModelViewSet):
     queryset = DeviceHealthLog.objects.all()
     serializer_class = DeviceHealthLogSerializer
 
+# Maintenance Record View
 class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRecord.objects.all()
     serializer_class = MaintenanceRecordSerializer
 
-
-# AI & Machine Learning Views
-# Load ML Model
+# ML Logic
 try:
     model_path = os.path.join(settings.BASE_DIR, 'ml_engine', 'model.pkl')
     device_risk_model = joblib.load(model_path)
-    print(f"ML Model loaded successfully from: {model_path}")
 except Exception as e:
     device_risk_model = None
-    print(f"Warning: ML Model not found at {model_path}. Error: {e}")
 
 @api_view(['GET'])
 def get_device_risks(request):
@@ -167,7 +233,6 @@ def get_device_risks(request):
             fails = log.past_failure_attempts or 0
             days_maint = (log.repair_history_count * 30) or 0
 
-            # ML Prediction
             model_risk = "Low"
             model_prob = 0
             if device_risk_model:
@@ -175,12 +240,10 @@ def get_device_risks(request):
                 model_risk = str(device_risk_model.predict(features)[0]).capitalize()
                 model_prob = int(max(device_risk_model.predict_proba(features)[0]) * 100)
 
-            # Hard Drive Logic (Thresholds)
             hard_risk = "Low"
             if disk < 40 or fails > 5: hard_risk = "High"
             elif disk < 70 or fails > 2: hard_risk = "Medium"
 
-            # Final Decision Logic
             final_risk = "High" if (model_risk == "High" or hard_risk == "High") else ("Medium" if (model_risk == "Medium" or hard_risk == "Medium") else "Low")
             final_prob = model_prob
             if hard_risk == "High" and final_prob < 80: final_prob = 85
