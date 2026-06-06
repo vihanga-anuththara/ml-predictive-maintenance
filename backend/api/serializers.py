@@ -9,7 +9,6 @@ class CompanySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'contact_email', 'devices_count']
 
     def get_devices_count(self, obj):
-        # Count of company devices
         return Device.objects.filter(company=obj).count()
 
 class DeviceSerializer(serializers.ModelSerializer):
@@ -19,31 +18,28 @@ class DeviceSerializer(serializers.ModelSerializer):
         model = Device
         fields = '__all__'
 
-    # Use company name for ID
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep['company'] = instance.company.name
         return rep
 
-    # Save / Update data using company name
     def create(self, validated_data):
         company_name = validated_data.pop('company')
         
         company_obj, created = Company.objects.get_or_create(
             name=company_name,
-            defaults={'contact_email': 'info@unknown.com'} 
+            defaults={'contact_email': ''} 
         )
         
         validated_data['company'] = company_obj
         return super().create(validated_data)
 
-    # Update device data
     def update(self, instance, validated_data):
         if 'company' in validated_data:
             company_name = validated_data.pop('company')
             company_obj, created = Company.objects.get_or_create(
                 name=company_name,
-                defaults={'contact_email': 'info@unknown.com'}
+                defaults={'contact_email': ''}
             )
             instance.company = company_obj
             
@@ -54,12 +50,12 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 class DeviceHealthLogSerializer(serializers.ModelSerializer):
     class Meta:
-        model = DeviceHealthLog # Model name
+        model = DeviceHealthLog 
         fields = '__all__'
 
 class MaintenanceRecordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MaintenanceRecord # Model name
+        model = MaintenanceRecord 
         fields = '__all__'
 
 class ContractSerializer(serializers.ModelSerializer):
@@ -76,20 +72,34 @@ class ContractSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         company_name = validated_data.pop('company')
+        contact_email = self.initial_data.get('contact_email', '')
         company_obj, created = Company.objects.get_or_create(
             name=company_name,
-            defaults={'contact_email': 'info@unknown.com'} 
+            defaults={'contact_email': contact_email} 
         )
+        
+        # Update email of old company
+        if not created and contact_email:
+            if not company_obj.contact_email or company_obj.contact_email == 'info@unknown.com':
+                company_obj.contact_email = contact_email
+                company_obj.save()
+
         validated_data['company'] = company_obj
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         if 'company' in validated_data:
             company_name = validated_data.pop('company')
+            contact_email = self.initial_data.get('contact_email', '')
             company_obj, created = Company.objects.get_or_create(
                 name=company_name,
-                defaults={'contact_email': 'info@unknown.com'}
+                defaults={'contact_email': contact_email}
             )
+            
+            if not created and contact_email:
+                company_obj.contact_email = contact_email
+                company_obj.save()
+                
             instance.company = company_obj
             
         for attr, value in validated_data.items():
