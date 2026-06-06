@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, X, Eye, EyeOff } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, X, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import './Login.css';
 
 function Login() {
@@ -10,21 +10,22 @@ function Login() {
     // Sign In State
     const [username, setUsername] = useState(''); 
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false); // Show/Hide password state
+    const [showPassword, setShowPassword] = useState(false);
     
-    const navigate = useNavigate();
+    // 2FA (OTP) States
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [loginEmail, setLoginEmail] = useState('');
 
-    // Toast Notification State
+    const navigate = useNavigate();
     const [notification, setNotification] = useState(null);
 
     const showToast = (type, title, message) => {
         setNotification({ type, title, message });
-        setTimeout(() => {
-            setNotification(null);
-        }, 4000);
+        setTimeout(() => setNotification(null), 4000);
     };
 
-    // JWT Login Function
+    // Login using Username and Password
     const handleLogin = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -35,27 +36,57 @@ function Login() {
                 password: password
             });
             
-            // Save JWT tokens
+            // If 2FA enabled, request OTP
+            if (response.data.message === 'OTP_REQUIRED') {
+                setLoginEmail(response.data.email);
+                setShowOtpModal(true);
+                showToast('success', '2FA Required', 'Please enter your authenticator code.');
+                setIsLoading(false);
+                return;
+            }
+
+            // Redirect to Dashboard
             localStorage.setItem('accessToken', response.data.access);
             localStorage.setItem('refreshToken', response.data.refresh);
-
-            // Save username on local storage
-            localStorage.setItem('username', response.data.username || username); 
-
-            const userRole = response.data.role || 'Technician';
-            localStorage.setItem('userRole', userRole);
+            localStorage.setItem('username', response.data.name || username); 
+            localStorage.setItem('userRole', response.data.role || 'Technician');
             
             navigate('/dashboard'); 
 
         } catch (error) {
             console.error("Login Error:", error);
-            
-            // Check if the user is blocked or invalid credentials
             if (error.response && error.response.status === 401) {
                 showToast('error', 'Authentication Failed', 'Invalid credentials or your account is blocked.');
             } else {
                 showToast('error', 'Connection Error', 'Server error! Could not connect to the backend.');
             }
+            setIsLoading(false);
+        }
+    };
+
+    // Login using OTP
+    const handleVerifyOtp = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+
+        try {
+            const response = await axios.post('http://127.0.0.1:8000/api/login-verify-otp/', {
+                email: loginEmail,
+                code: otpCode
+            });
+
+            // Redirect to Dashboard
+            localStorage.setItem('accessToken', response.data.access);
+            localStorage.setItem('refreshToken', response.data.refresh);
+            localStorage.setItem('username', response.data.name || username); 
+            localStorage.setItem('userRole', response.data.role || 'Technician');
+            
+            setShowOtpModal(false);
+            navigate('/dashboard'); 
+
+        } catch (error) {
+            console.error("OTP Error:", error);
+            showToast('error', 'Verification Failed', 'Invalid 2FA code. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -89,7 +120,6 @@ function Login() {
             {/* RIGHT - FORM PANEL */}
             <div className="form-panel">
                 <div className="form-inner">
-                    
                     <div className="form-animate">
                         <form onSubmit={handleLogin} className="auth-form">
                             <div className="form-heading-block">
@@ -136,12 +166,61 @@ function Login() {
                             </div>
 
                             <button type="submit" className="btn-primary" disabled={isLoading} style={{ marginTop: '10px' }}>
-                                {isLoading ? 'Signing In...' : 'Sign in'}
+                                {isLoading && !showOtpModal ? 'Signing In...' : 'Sign in'}
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
+
+            {/* 2FA OTP Modal */}
+            {showOtpModal && (
+                <div className="login-modal-overlay">
+                    <div className="login-modal-content">
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                            <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '50%' }}>
+                                <ShieldCheck size={36} color="#3b82f6" />
+                            </div>
+                        </div>
+                        <h3 style={{ marginBottom: '8px', fontSize: '1.25rem', color: '#111827', textAlign: 'center' }}>Two-Factor Authentication</h3>
+                        <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.9rem', textAlign: 'center' }}>
+                            Enter the 6-digit code from your authenticator app.
+                        </p>
+                        <form onSubmit={handleVerifyOtp}>
+                            <input 
+                                type="text"
+                                className="login-otp-input"
+                                placeholder="000000"
+                                maxLength="6"
+                                required
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} // Only numbers
+                            />
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                                <button 
+                                    type="button" 
+                                    className="btn-cancel" 
+                                    style={{ flex: 1 }}
+                                    onClick={() => {
+                                        setShowOtpModal(false);
+                                        setOtpCode('');
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="btn-primary" 
+                                    style={{ flex: 1, marginTop: 0 }}
+                                    disabled={isLoading || otpCode.length < 6}
+                                >
+                                    {isLoading ? 'Verifying...' : 'Verify'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Toast Notification Container */}
             {notification && (
