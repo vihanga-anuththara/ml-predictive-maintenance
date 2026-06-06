@@ -332,3 +332,8 @@
     height: 80vh;
     text-align: center;
 }
+
+.status-badge.expires-today {
+    background-color: #f59e0b; /* Orange */
+    color: white;
+}
