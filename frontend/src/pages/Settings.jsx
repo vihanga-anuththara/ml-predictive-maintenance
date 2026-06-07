@@ -6,7 +6,7 @@ import './Settings.css';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
     Search, Plus, Shield, Wrench, Edit, Trash2, UserCog, 
-    Lock, Globe, Bell, Save, Database, X, CheckCircle2, AlertTriangle, QrCode
+    Lock, Globe, Bell, Save, Database, X, CheckCircle2, AlertTriangle, QrCode, Download
 } from 'lucide-react';
 
 function Settings() {
@@ -29,8 +29,10 @@ function Settings() {
     const [autoLogout, setAutoLogout] = useState(localStorage.getItem('autoLogout') !== 'false');
 
     // 2FA States
+    const [is2FAEnabled, setIs2FAEnabled] = useState(localStorage.getItem('is2faEnabled') === 'true');
     const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
     const [qrUri, setQrUri] = useState('');
+    const [setupSecret, setSetupSecret] = useState(''); // Use as Recovery code
     const [otpCode, setOtpCode] = useState('');
     const [isVerifying2FA, setIsVerifying2FA] = useState(false);
 
@@ -158,14 +160,30 @@ function Settings() {
         }
     };
 
-    // 2FA Setup API Call
-    const handleSetup2FA = async () => {
-        try {
-            const response = await api.get('/setup-2fa/');
-            setQrUri(response.data.qr_uri);
-            setIs2FAModalOpen(true);
-        } catch (error) {
-            showToast('error', 'Setup Failed', 'Could not initiate 2FA setup. Please try again later.');
+    // 2FA Toggle On/Off Handle
+    const handle2FAToggle = async (e) => {
+        const turnOn = e.target.checked;
+        
+        if (turnOn) {
+            // Turn ON - Open Setup Modal
+            try {
+                const response = await api.get('/setup-2fa/');
+                setQrUri(response.data.qr_uri);
+                setSetupSecret(response.data.secret); // Secret Key as a Recovery Key 
+                setIs2FAModalOpen(true);
+            } catch (error) {
+                showToast('error', 'Setup Failed', 'Could not initiate 2FA setup.');
+            }
+        } else {
+            // Turn OFF - Call disable API
+            try {
+                await api.post('/disable-2fa/');
+                setIs2FAEnabled(false);
+                localStorage.setItem('is2faEnabled', 'false');
+                showToast('success', '2FA Disabled', 'Two-Factor Authentication has been turned off and reset.');
+            } catch (error) {
+                showToast('error', 'Action Failed', 'Could not disable 2FA. Please try again.');
+            }
         }
     };
 
@@ -175,7 +193,9 @@ function Settings() {
         setIsVerifying2FA(true);
         try {
             await api.post('/verify-2fa/', { code: otpCode });
-            showToast('success', '2FA Enabled', 'Two-Factor Authentication is now securely active on your account!');
+            showToast('success', '2FA Enabled', 'Two-Factor Authentication is now securely active on your account!');     
+            setIs2FAEnabled(true);
+            localStorage.setItem('is2faEnabled', 'true');
             setIs2FAModalOpen(false);
             setOtpCode('');
         } catch (error) {
@@ -183,6 +203,27 @@ function Settings() {
         } finally {
             setIsVerifying2FA(false);
         }
+    };
+
+    // Recovery Key Download Function
+    const downloadRecoveryCode = () => {
+        const element = document.createElement("a");
+        const fileContent = `======================================\n` +
+                            `   2FA RECOVERY CODE (DO NOT SHARE)   \n` +
+                            `======================================\n\n` +
+                            `If you lose access to your Authenticator App, \n` +
+                            `you can enter this secret key manually into \n` +
+                            `any authenticator app to restore your code generator.\n\n` +
+                            `Recovery/Setup Key: ${setupSecret}\n\n` +
+                            `Keep this file safe!`;
+        
+        const file = new Blob([fileContent], {type: 'text/plain'});
+        element.href = URL.createObjectURL(file);
+        element.download = "2FA_Recovery_Code.txt";
+        document.body.appendChild(element); // Required for this to work in FireFox
+        element.click();
+        document.body.removeChild(element);
+        showToast('success', 'Downloaded', 'Recovery code has been downloaded successfully.');
     };
 
     return (
@@ -258,11 +299,22 @@ function Settings() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                 {/* 2FA Security Section */}
                                 <div className="settings-card p-6" style={{ borderLeft: '4px solid #8b5cf6' }}>
-                                    <h3 className="section-title"><QrCode size={20} color="#8b5cf6" /> Two-Factor Authentication (2FA)</h3>
-                                    <p className="section-desc mt-2">Add an extra layer of security to your account using an authenticator app (e.g., Google Authenticator, Authy).</p>
-                                    <button type="button" className="btn-primary mt-4" style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={handleSetup2FA}>
-                                        <Shield size={18} /> Setup 2FA
-                                    </button>
+                                    <div className="toggle-section">
+                                        <div>
+                                            <h3 className="section-title"><QrCode size={20} color="#8b5cf6" /> Two-Factor Authentication</h3>
+                                            <p className="text-muted text-sm mt-1">Add an extra layer of security using an authenticator app.</p>
+                                        </div>
+                                        <label className="toggle-switch">
+                                            <input type="checkbox" checked={is2FAEnabled} onChange={handle2FAToggle} />
+                                            <span className="slider round"></span>
+                                        </label>
+                                    </div>
+                                    {is2FAEnabled && (
+                                        <div style={{ marginTop: '16px', padding: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <CheckCircle2 size={18} color="#16a34a" />
+                                            <span style={{ fontSize: '0.9rem', color: '#15803d', fontWeight: '500' }}>2FA is currently active and protecting your account.</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="settings-card p-6">
@@ -284,13 +336,7 @@ function Settings() {
                     {activeTab === 'preferences' && currentRole === 'Admin' && (
                         <div className="settings-content-grid fade-in">
                             <div className="settings-card p-6">
-                                <h3 className="section-title"><Globe size={20} /> Regional Settings</h3>
-                                <form className="settings-form mt-4">
-                                    <div className="form-group"><label>Timezone</label><select><option>Asia/Colombo (GMT+5:30)</option><option>UTC (GMT+0:00)</option><option>America/New_York (GMT-5:00)</option></select></div>
-                                    <div className="form-group"><label>Date Format</label><select><option>YYYY-MM-DD</option><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option></select></div>
-                                </form>
-                                <hr className="divider" />
-                                <h3 className="section-title mt-4"><Database size={20} /> Data Management</h3>
+                                <h3 className="section-title"><Database size={20} /> Data Management</h3>
                                 <div className="toggle-section mt-4">
                                     <div><h4 className="font-medium">Daily Cloud Backups</h4><p className="text-muted text-sm">Automatically backup system logs and ML data to the cloud.</p></div>
                                     <label className="toggle-switch"><input type="checkbox" defaultChecked /><span className="slider round"></span></label>
@@ -364,25 +410,40 @@ function Settings() {
                 </div>
             )}
 
-            {/* 2FA Setup Modal */}
+            {/* 2FA Setup Modal with Recovery Code Download */}
             {is2FAModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center' }}>
                         <div className="modal-header">
                             <h3>Set Up Authenticator</h3>
-                            <button className="close-btn" onClick={() => setIs2FAModalOpen(false)}><X size={20} /></button>
+                            <button className="close-btn" onClick={() => {
+                                setIs2FAModalOpen(false);
+                                setIs2FAEnabled(false); // If they cancel, uncheck the toggle
+                            }}>
+                                <X size={20} />
+                            </button>
                         </div>
                         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <p style={{ marginBottom: '16px', color: '#4b5563', fontSize: '0.95rem' }}>
                                 1. Scan this QR code using <strong>Google Authenticator</strong> or any 2FA app on your phone.
                             </p>
                             
-                            <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '24px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+                            <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '16px', display: 'flex', justifyContent: 'center', width: '100%' }}>
                                 {qrUri ? (
                                     <QRCodeSVG value={qrUri} size={180} level="M" />
                                 ) : (
                                     <div style={{ height: '180px', display: 'flex', alignItems: 'center', color: '#9ca3af' }}>Loading QR Code...</div>
                                 )}
+                            </div>
+
+                            {/* Recovery Code Download Alert */}
+                            <div style={{ background: '#fef3c7', padding: '12px', borderRadius: '8px', border: '1px solid #fde68a', marginBottom: '24px', textAlign: 'left', width: '100%' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#92400e', marginBottom: '8px' }}>
+                                    <strong>Important:</strong> Save your recovery code. If you lose your phone, you will need this code to restore access.
+                                </p>
+                                <button type="button" className="action-btn" style={{ width: '100%', fontSize: '0.85rem', padding: '8px', background: 'white' }} onClick={downloadRecoveryCode}>
+                                    <Download size={14} /> Download Recovery Code (.txt)
+                                </button>
                             </div>
 
                             <p style={{ marginBottom: '12px', color: '#4b5563', fontSize: '0.95rem' }}>
@@ -400,7 +461,10 @@ function Settings() {
                                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                                 />
                                 <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                                    <button type="button" className="btn-cancel" style={{ flex: 1 }} onClick={() => setIs2FAModalOpen(false)}>Cancel</button>
+                                    <button type="button" className="btn-cancel" style={{ flex: 1 }} onClick={() => {
+                                        setIs2FAModalOpen(false);
+                                        setIs2FAEnabled(false);
+                                    }}>Cancel</button>
                                     <button type="submit" className="btn-primary" style={{ flex: 1, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} disabled={isVerifying2FA || otpCode.length < 6}>
                                         {isVerifying2FA ? 'Verifying...' : 'Verify & Enable'}
                                     </button>
