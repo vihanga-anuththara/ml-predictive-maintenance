@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, X, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, X, Eye, EyeOff, ShieldCheck, KeyRound } from 'lucide-react';
 import './Login.css';
 
 function Login() {
@@ -16,6 +16,9 @@ function Login() {
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [otpCode, setOtpCode] = useState('');
     const [loginEmail, setLoginEmail] = useState('');
+    
+    // Recovery Mode State
+    const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
     const navigate = useNavigate();
     const [notification, setNotification] = useState(null);
@@ -40,6 +43,8 @@ function Login() {
             if (response.data.message === 'OTP_REQUIRED') {
                 setLoginEmail(response.data.email);
                 setShowOtpModal(true);
+                setIsRecoveryMode(false); // Reset to default OTP mode
+                setOtpCode('');
                 showToast('success', '2FA Required', 'Please enter your authenticator code.');
                 setIsLoading(false);
                 return;
@@ -64,7 +69,7 @@ function Login() {
         }
     };
 
-    // Login using OTP
+    // Login using OTP or Recovery Code
     const handleVerifyOtp = async (e) => {
         e.preventDefault();
         setIsLoading(true);
@@ -72,7 +77,7 @@ function Login() {
         try {
             const response = await axios.post('http://127.0.0.1:8000/api/login-verify-otp/', {
                 email: loginEmail,
-                code: otpCode
+                code: otpCode.trim() // Remove Spaces 
             });
 
             // Redirect to Dashboard
@@ -82,11 +87,19 @@ function Login() {
             localStorage.setItem('userRole', response.data.role || 'Technician');
             
             setShowOtpModal(false);
+            
+            // If logged using recovery code, display a message.
+            if (isRecoveryMode) {
+                setTimeout(() => {
+                    alert("You logged in using a Recovery Code. Please go to Settings and reset your 2FA to secure your account.");
+                }, 1000);
+            }
+
             navigate('/dashboard'); 
 
         } catch (error) {
             console.error("OTP Error:", error);
-            showToast('error', 'Verification Failed', 'Invalid 2FA code. Please try again.');
+            showToast('error', 'Verification Failed', isRecoveryMode ? 'Invalid recovery code.' : 'Invalid 2FA code.');
         } finally {
             setIsLoading(false);
         }
@@ -173,29 +186,62 @@ function Login() {
                 </div>
             </div>
 
-            {/* 2FA OTP Modal */}
+            {/* 2FA & Recovery Modal */}
             {showOtpModal && (
                 <div className="login-modal-overlay">
                     <div className="login-modal-content">
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                            <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '50%' }}>
-                                <ShieldCheck size={36} color="#3b82f6" />
+                            <div style={{ background: isRecoveryMode ? '#fef3c7' : '#eff6ff', padding: '16px', borderRadius: '50%', transition: 'all 0.3s' }}>
+                                {isRecoveryMode ? <KeyRound size={36} color="#d97706" /> : <ShieldCheck size={36} color="#3b82f6" />}
                             </div>
                         </div>
-                        <h3 style={{ marginBottom: '8px', fontSize: '1.25rem', color: '#111827', textAlign: 'center' }}>Two-Factor Authentication</h3>
-                        <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.9rem', textAlign: 'center' }}>
-                            Enter the 6-digit code from your authenticator app.
+                        
+                        <h3 style={{ marginBottom: '8px', fontSize: '1.25rem', color: '#111827', textAlign: 'center' }}>
+                            {isRecoveryMode ? 'Recovery Mode' : 'Two-Factor Authentication'}
+                        </h3>
+                        
+                        <p style={{ color: '#6b7280', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center' }}>
+                            {isRecoveryMode 
+                                ? 'Enter your emergency recovery code to regain access.' 
+                                : 'Enter the 6-digit code from your authenticator app.'}
                         </p>
+                        
                         <form onSubmit={handleVerifyOtp}>
-                            <input 
-                                type="text"
-                                className="login-otp-input"
-                                placeholder="000000"
-                                maxLength="6"
-                                required
-                                value={otpCode}
-                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} // Only numbers
-                            />
+                            {isRecoveryMode ? (
+                                <input 
+                                    type="text"
+                                    className="login-recovery-input"
+                                    placeholder="Enter your long recovery code"
+                                    required
+                                    value={otpCode}
+                                    onChange={(e) => setOtpCode(e.target.value)} 
+                                />
+                            ) : (
+                                <input 
+                                    type="text"
+                                    className="login-otp-input"
+                                    placeholder="000000"
+                                    maxLength="6"
+                                    required
+                                    value={otpCode}
+                                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} // Only numbers
+                                />
+                            )}
+                            
+                            {/* Switch Mode Button */}
+                            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                                <button 
+                                    type="button" 
+                                    className="recovery-toggle-btn"
+                                    onClick={() => {
+                                        setIsRecoveryMode(!isRecoveryMode);
+                                        setOtpCode('');
+                                    }}
+                                >
+                                    {isRecoveryMode ? "Back to Authenticator app" : "Lost access to your app?"}
+                                </button>
+                            </div>
+
                             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                                 <button 
                                     type="button" 
@@ -204,6 +250,7 @@ function Login() {
                                     onClick={() => {
                                         setShowOtpModal(false);
                                         setOtpCode('');
+                                        setIsRecoveryMode(false);
                                     }}
                                 >
                                     Cancel
@@ -212,7 +259,7 @@ function Login() {
                                     type="submit" 
                                     className="btn-primary" 
                                     style={{ flex: 1, marginTop: 0 }}
-                                    disabled={isLoading || otpCode.length < 6}
+                                    disabled={isLoading || (isRecoveryMode ? otpCode.length < 10 : otpCode.length < 6)}
                                 >
                                     {isLoading ? 'Verifying...' : 'Verify'}
                                 </button>
