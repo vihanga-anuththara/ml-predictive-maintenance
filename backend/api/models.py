@@ -99,6 +99,24 @@ class TechnicianTask(models.Model):
     def __str__(self):
         return f"Task for {self.technician.name} on {self.device.name}"
 
+# System Logs Model
+class SystemLog(models.Model):
+    STATUS_CHOICES = (
+        ('Success', 'Success'),
+        ('Warning', 'Warning'),
+        ('Error', 'Error'),
+    )
+    user = models.CharField(max_length=255)
+    action = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Success')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp'] 
+
+    def __str__(self):
+        return f"{self.timestamp} - {self.user} - {self.action}"
+
 # Django Signal to create SystemUser profile
 @receiver(post_save, sender=User)
 def create_system_user(sender, instance, created, **kwargs):
