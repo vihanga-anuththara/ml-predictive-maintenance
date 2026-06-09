@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Company, Device, DeviceHealthLog, MaintenanceRecord, Contract, TechnicianTask, SystemUser
+from .models import Company, Device, DeviceHealthLog, MaintenanceRecord, Contract, TechnicianTask, SystemUser, SystemLog
 
 class CompanySerializer(serializers.ModelSerializer):
     devices_count = serializers.SerializerMethodField()
@@ -116,3 +116,14 @@ class SystemUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemUser
         fields = '__all__'
+
+# System Log Serializer
+class SystemLogSerializer(serializers.ModelSerializer):
+    time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SystemLog
+        fields = ['id', 'time', 'user', 'action', 'status']
+
+    def get_time(self, obj):
+        return obj.timestamp.strftime("%Y-%m-%d %I:%M %p")
