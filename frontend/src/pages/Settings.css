@@ -202,12 +202,6 @@
     background: #fef2f2;
 }
 
-.empty-state {
-    padding: 32px;
-    text-align: center;
-    color: #6b7280;
-}
-
 /* Animation for Tab Switching */
 .fade-in {
     animation: fadeIn 0.3s ease-in-out;
@@ -222,6 +216,21 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Loading Spinner Animation */
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
     }
 }
 
@@ -261,12 +270,6 @@
     font-size: 0.85rem;
     color: #6b7280;
     margin-bottom: 16px;
-}
-
-.divider {
-    border: none;
-    border-top: 1px solid #e5e7eb;
-    margin: 24px 0;
 }
 
 /* Forms inside Settings */
