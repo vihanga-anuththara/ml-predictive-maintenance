@@ -13,10 +13,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from datetime import date
 from google import genai 
-from .models import Company, Device, DeviceHealthLog, MaintenanceRecord, Contract, TechnicianTask, SystemUser
+from .models import Company, Device, DeviceHealthLog, MaintenanceRecord, Contract, TechnicianTask, SystemUser, SystemLog
 from .serializers import (
     CompanySerializer, DeviceSerializer, DeviceHealthLogSerializer, 
-    MaintenanceRecordSerializer, ContractSerializer, TechnicianTaskSerializer, SystemUserSerializer
+    MaintenanceRecordSerializer, ContractSerializer, TechnicianTaskSerializer, SystemUserSerializer, SystemLogSerializer
 )
 
 # Authentication and User Management Views
@@ -55,19 +55,20 @@ class LoginView(APIView):
         user = authenticate(username=email, password=password)
         
         if user:
-            # Check SystemUsers' 2FA status
             sys_user = SystemUser.objects.filter(email=user.email).first()
             
             if sys_user and sys_user.is_2fa_enabled:
-                # Request OTP
                 return Response({
                     "message": "OTP_REQUIRED", 
                     "email": user.email
                 }, status=status.HTTP_200_OK)
 
-            # Give token access
             refresh = RefreshToken.for_user(user)
             real_role = 'Admin' if user.is_staff or user.is_superuser else 'Technician'
+            
+            # Record Log
+            SystemLog.objects.create(user=f"{user.first_name} {user.last_name}", action="Logged into the system", status="Success")
+
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
@@ -77,7 +78,6 @@ class LoginView(APIView):
         else:
             return Response({"error": "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
-# OTP Login View
 class VerifyLoginOTPView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
@@ -92,23 +92,26 @@ class VerifyLoginOTPView(APIView):
         if not sys_user or not sys_user.totp_secret:
             return Response({"error": "2FA is not setup"}, status=status.HTTP_400_BAD_REQUEST)
             
-        # Check OTP code OR Recovery Code (Secret)
         totp = pyotp.TOTP(sys_user.totp_secret)
         
-        # Check recovery code (code == sys_user.totp_secret)
         if totp.verify(code) or code == sys_user.totp_secret:
             refresh = RefreshToken.for_user(user)
             real_role = 'Admin' if user.is_staff or user.is_superuser else 'Technician'
+            
+            # Record Log
+            SystemLog.objects.create(user=f"{user.first_name} {user.last_name}", action="Logged in using 2FA/Recovery", status="Success")
+
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
                 'name': f"{user.first_name} {user.last_name}",
                 'role': real_role
             })
-            
+        
+        # Log Failed 2FA
+        SystemLog.objects.create(user=f"{user.first_name} {user.last_name}", action="Failed 2FA attempt", status="Warning")
         return Response({"error": "Invalid Authenticator Code"}, status=status.HTTP_400_BAD_REQUEST)
 
-# 2FA Setup View (QR Code)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def setup_2fa(request):
@@ -121,13 +124,10 @@ def setup_2fa(request):
         sys_user.save()
         
     totp = pyotp.TOTP(sys_user.totp_secret)
-    # URL used to create QR Code
     provisioning_uri = totp.provisioning_uri(name=sys_user.email, issuer_name="Predict Failures System")
     
     return Response({"qr_uri": provisioning_uri, "secret": sys_user.totp_secret})
 
-
-# 2FA Activate View
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_and_enable_2fa(request):
@@ -138,19 +138,20 @@ def verify_and_enable_2fa(request):
     if totp.verify(code):
         sys_user.is_2fa_enabled = True
         sys_user.save()
+        SystemLog.objects.create(user=sys_user.name, action="Enabled Two-Factor Authentication", status="Success")
         return Response({"message": "Two-Factor Authentication enabled successfully!"})
         
     return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
 
-# 2FA Disable View (Toggle off)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def disable_2fa(request):
     sys_user = SystemUser.objects.filter(email=request.user.email).first()
     if sys_user:
         sys_user.is_2fa_enabled = False
-        sys_user.totp_secret = None  # Reset 2FA
+        sys_user.totp_secret = None 
         sys_user.save()
+        SystemLog.objects.create(user=sys_user.name, action="Disabled Two-Factor Authentication", status="Warning")
         return Response({"message": "2FA disabled successfully."})
     return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -164,9 +165,12 @@ def change_password(request):
         return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
     user.set_password(new_password)
     user.save()
+    
+    admin_name = request.user.first_name or request.user.username
+    SystemLog.objects.create(user=admin_name, action="Changed account password", status="Success")
+    
     return Response({"message": "Password updated successfully!"}, status=status.HTTP_200_OK)
 
-# SystemUser View
 class SystemUserViewSet(viewsets.ModelViewSet):
     queryset = SystemUser.objects.all()
     serializer_class = SystemUserSerializer
@@ -200,30 +204,46 @@ class CompanyViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-# Contract View
 class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.all()
     serializer_class = ContractSerializer
 
-# Device View
 class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
 
-# Technician Task View
 class TechnicianTaskViewSet(viewsets.ModelViewSet):
     queryset = TechnicianTask.objects.all()
     serializer_class = TechnicianTaskSerializer
 
-# Device Health Log View
 class DeviceHealthLogViewSet(viewsets.ModelViewSet):
     queryset = DeviceHealthLog.objects.all()
     serializer_class = DeviceHealthLogSerializer
 
-# Maintenance Record View
 class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRecord.objects.all()
     serializer_class = MaintenanceRecordSerializer
+
+class SystemLogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        logs = SystemLog.objects.all()[:1000]
+        serializer = SystemLogSerializer(logs, many=True)
+        return Response(serializer.data)
+
+class ClearSystemLogsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        SystemLog.objects.all().delete()
+        admin_name = request.user.first_name or request.user.username
+        SystemLog.objects.create(
+            user=admin_name,
+            action="Permanently cleared all system logs",
+            status="Warning"
+        )
+        return Response({"message": "Logs cleared successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 # ML Logic
 try:
