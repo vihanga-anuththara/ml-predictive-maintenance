@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api'; 
+import api from '../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Sidebar from '../components/Sidebar';
 import './Settings.css';
 import { QRCodeSVG } from 'qrcode.react';
-import { 
-    Search, Plus, Shield, Wrench, Edit, Trash2, UserCog, 
-    Lock, Globe, Bell, Save, Database, X, CheckCircle2, AlertTriangle, QrCode, Download
+import {
+    Search, Plus, Shield, Wrench, Edit, Trash2, UserCog,
+    Lock, Globe, Bell, Save, Database, X, CheckCircle2, AlertTriangle, QrCode, Download, Loader2
 } from 'lucide-react';
 
 function Settings() {
     const navigate = useNavigate();
-    const currentRole = localStorage.getItem('userRole') || 'Technician'; 
+    const currentRole = localStorage.getItem('userRole') || 'Technician';
 
     const [activeTab, setActiveTab] = useState(currentRole === 'Admin' ? 'users' : 'security');
     const [users, setUsers] = useState([]);
@@ -32,9 +34,16 @@ function Settings() {
     const [is2FAEnabled, setIs2FAEnabled] = useState(localStorage.getItem('is2faEnabled') === 'true');
     const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
     const [qrUri, setQrUri] = useState('');
-    const [setupSecret, setSetupSecret] = useState(''); // Use as Recovery code
+    const [setupSecret, setSetupSecret] = useState('');
     const [otpCode, setOtpCode] = useState('');
     const [isVerifying2FA, setIsVerifying2FA] = useState(false);
+
+    // System Logs States
+    const [logsEnabled, setLogsEnabled] = useState(localStorage.getItem('logsEnabled') !== 'false');
+    const [logDownloadModal, setLogDownloadModal] = useState(false);
+    const [clearLogsModal, setClearLogsModal] = useState(false);
+    const [isGeneratingLogs, setIsGeneratingLogs] = useState(false);
+    const [isClearingLogs, setIsClearingLogs] = useState(false);
 
     const showToast = (type, title, message) => {
         setNotification({ type, title, message });
@@ -57,7 +66,7 @@ function Settings() {
             window.addEventListener('keydown', resetTimer);
             window.addEventListener('click', resetTimer);
             window.addEventListener('scroll', resetTimer);
-            resetTimer(); 
+            resetTimer();
         }
 
         return () => {
@@ -90,8 +99,8 @@ function Settings() {
         }
     };
 
-    const filteredUsers = users.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredUsers = users.filter(user =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -131,8 +140,8 @@ function Settings() {
 
                 const nameParts = formData.name.trim().split(' ');
                 const registerPayload = {
-                    username: formData.email, email: formData.email, 
-                    first_name: nameParts[0], last_name: nameParts.slice(1).join(' ') || 'User', 
+                    username: formData.email, email: formData.email,
+                    first_name: nameParts[0], last_name: nameParts.slice(1).join(' ') || 'User',
                     password: formData.password, role: formData.role
                 };
                 await api.post('/register/', registerPayload);
@@ -142,7 +151,7 @@ function Settings() {
                 showToast('success', 'User Updated', 'User details updated successfully!');
             }
             setIsModalOpen(false);
-            setTimeout(() => { fetchUsers(); }, 500); 
+            setTimeout(() => { fetchUsers(); }, 500);
         } catch (error) {
             showToast('error', 'Save Failed', 'Cannot connect to the server or validation failed.');
         }
@@ -154,28 +163,24 @@ function Settings() {
         try {
             await api.post('/change-password/', { current: passwords.current, new: passwords.new });
             showToast('success', 'Security Updated', 'Password successfully updated!');
-            setPasswords({ current: '', new: '', confirm: '' }); 
+            setPasswords({ current: '', new: '', confirm: '' });
         } catch (error) {
             showToast('error', 'Update Failed', "Failed to update password. Check your current password.");
         }
     };
 
-    // 2FA Toggle On/Off Handle
     const handle2FAToggle = async (e) => {
         const turnOn = e.target.checked;
-        
         if (turnOn) {
-            // Turn ON - Open Setup Modal
             try {
                 const response = await api.get('/setup-2fa/');
                 setQrUri(response.data.qr_uri);
-                setSetupSecret(response.data.secret); // Secret Key as a Recovery Key 
+                setSetupSecret(response.data.secret);
                 setIs2FAModalOpen(true);
             } catch (error) {
                 showToast('error', 'Setup Failed', 'Could not initiate 2FA setup.');
             }
         } else {
-            // Turn OFF - Call disable API
             try {
                 await api.post('/disable-2fa/');
                 setIs2FAEnabled(false);
@@ -187,13 +192,12 @@ function Settings() {
         }
     };
 
-    // 2FA Verify & Enable API Call
     const handleVerify2FA = async (e) => {
         e.preventDefault();
         setIsVerifying2FA(true);
         try {
             await api.post('/verify-2fa/', { code: otpCode });
-            showToast('success', '2FA Enabled', 'Two-Factor Authentication is now securely active on your account!');     
+            showToast('success', '2FA Enabled', 'Two-Factor Authentication is now securely active on your account!');
             setIs2FAEnabled(true);
             localStorage.setItem('is2faEnabled', 'true');
             setIs2FAModalOpen(false);
@@ -205,25 +209,131 @@ function Settings() {
         }
     };
 
-    // Recovery Key Download Function
     const downloadRecoveryCode = () => {
         const element = document.createElement("a");
         const fileContent = `======================================\n` +
-                            `   2FA RECOVERY CODE (DO NOT SHARE)   \n` +
-                            `======================================\n\n` +
-                            `If you lose access to your Authenticator App, \n` +
-                            `you can enter this secret key manually into \n` +
-                            `any authenticator app to restore your code generator.\n\n` +
-                            `Recovery/Setup Key: ${setupSecret}\n\n` +
-                            `Keep this file safe!`;
-        
-        const file = new Blob([fileContent], {type: 'text/plain'});
+            `   2FA RECOVERY CODE (DO NOT SHARE)   \n` +
+            `======================================\n\n` +
+            `If you lose access to your Authenticator App, \n` +
+            `you can enter this secret key manually into \n` +
+            `any authenticator app to restore your code generator.\n\n` +
+            `Recovery/Setup Key: ${setupSecret}\n\n` +
+            `Keep this file safe!`;
+
+        const file = new Blob([fileContent], { type: 'text/plain' });
         element.href = URL.createObjectURL(file);
         element.download = "2FA_Recovery_Code.txt";
-        document.body.appendChild(element); // Required for this to work in FireFox
+        document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
         showToast('success', 'Downloaded', 'Recovery code has been downloaded successfully.');
+    };
+
+    // System Logs Functions 
+    const handleLogsToggle = (e) => {
+        const isEnabled = e.target.checked;
+        setLogsEnabled(isEnabled);
+        localStorage.setItem('logsEnabled', isEnabled);
+        showToast('success', 'Preferences Updated', `System Action Logging is now ${isEnabled ? 'Enabled' : 'Disabled'}.`);
+    };
+
+    const executeDownloadLogs = async (format) => {
+        setIsGeneratingLogs(true);
+        const today = new Date().toISOString().split('T')[0];
+
+        try {
+            // Fetch logs from Backend
+            const res = await api.get('/system-logs/');
+            const logsData = Array.isArray(res.data) ? res.data : (res.data.results || []);
+
+            if (logsData.length === 0) {
+                showToast('error', 'Empty Logs', 'No system logs available to export.');
+                setIsGeneratingLogs(false);
+                setLogDownloadModal(false);
+                return;
+            }
+
+            const columns = [
+                { label: 'Date/Time', key: 'time' },
+                { label: 'User', key: 'user' },
+                { label: 'Action', key: 'action' },
+                { label: 'Status', key: 'status' }
+            ];
+
+            if (format === 'CSV') {
+                const headers = columns.map(c => c.label).join(',');
+                const rows = logsData.map(log =>
+                    columns.map(c => {
+                        let val = String(log[c.key] || '');
+                        val = val.replace(/"/g, '""');
+                        return `"${val}"`;
+                    }).join(',')
+                ).join('\n');
+
+                const csvContent = `\uFEFF${headers}\n${rows}`;
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.setAttribute('hidden', '');
+                a.setAttribute('href', url);
+                a.setAttribute('download', `System_Logs_${today}.csv`);
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+            } else if (format === 'PDF') {
+                const doc = new jsPDF();
+                const generatedBy = localStorage.getItem('username') || 'Admin';
+
+                doc.setFontSize(18);
+                doc.setTextColor(37, 99, 235);
+                doc.text(`SYSTEM ACTIVITY LOGS`, 14, 22);
+
+                doc.setFontSize(10);
+                doc.setTextColor(75, 85, 99);
+                doc.text(`Date Generated: ${today}`, 14, 32);
+                doc.text(`Generated By: ${generatedBy}`, 14, 38);
+                doc.text(`Total Records: ${logsData.length}`, 14, 44);
+
+                const tableHead = [columns.map(c => c.label)];
+                const tableBody = logsData.map(log => columns.map(c => String(log[c.key] || '')));
+
+                autoTable(doc, {
+                    startY: 52,
+                    head: tableHead,
+                    body: tableBody,
+                    theme: 'grid',
+                    styles: { fontSize: 9, cellPadding: 3 },
+                    headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
+                    alternateRowStyles: { fillColor: [243, 244, 246] }
+                });
+
+                doc.save(`System_Logs_${today}.pdf`);
+            }
+
+            showToast('success', 'Download Complete', `System logs exported successfully as ${format}.`);
+            setLogDownloadModal(false);
+
+        } catch (error) {
+            console.error("Logs Fetch Error:", error);
+            showToast('error', 'Export Failed', 'Could not fetch log data from the server.');
+        } finally {
+            setIsGeneratingLogs(false);
+        }
+    };
+
+    const executeClearLogs = async () => {
+        setIsClearingLogs(true);
+        try {
+            await api.delete('/system-logs/clear/');
+            showToast('success', 'Logs Cleared', 'All system activity logs have been permanently deleted.');
+            setClearLogsModal(false);
+        } catch (error) {
+            showToast('error', 'Clear Failed', 'Could not clear system logs.');
+        } finally {
+            setIsClearingLogs(false);
+        }
     };
 
     return (
@@ -289,15 +399,14 @@ function Settings() {
                             <div className="settings-card p-6">
                                 <h3 className="section-title"><Lock size={20} /> Change Password</h3>
                                 <form className="settings-form mt-4">
-                                    <div className="form-group"><label>Current Password</label><input type="password" value={passwords.current} onChange={(e) => setPasswords({...passwords, current: e.target.value})} /></div>
-                                    <div className="form-group"><label>New Password</label><input type="password" value={passwords.new} onChange={(e) => setPasswords({...passwords, new: e.target.value})} /></div>
-                                    <div className="form-group"><label>Confirm New Password</label><input type="password" value={passwords.confirm} onChange={(e) => setPasswords({...passwords, confirm: e.target.value})} /></div>
+                                    <div className="form-group"><label>Current Password</label><input type="password" value={passwords.current} onChange={(e) => setPasswords({ ...passwords, current: e.target.value })} /></div>
+                                    <div className="form-group"><label>New Password</label><input type="password" value={passwords.new} onChange={(e) => setPasswords({ ...passwords, new: e.target.value })} /></div>
+                                    <div className="form-group"><label>Confirm New Password</label><input type="password" value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} /></div>
                                     <button type="button" className="btn-primary mt-2" onClick={handlePasswordUpdate}>Update Password</button>
                                 </form>
                             </div>
-                            
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                {/* 2FA Security Section */}
                                 <div className="settings-card p-6" style={{ borderLeft: '4px solid #8b5cf6' }}>
                                     <div className="toggle-section">
                                         <div>
@@ -335,12 +444,30 @@ function Settings() {
                     {/* TAB 3: SYSTEM PREFERENCES */}
                     {activeTab === 'preferences' && currentRole === 'Admin' && (
                         <div className="settings-content-grid fade-in">
-                            <div className="settings-card p-6">
-                                <h3 className="section-title"><Database size={20} /> Data Management</h3>
-                                <div className="toggle-section mt-4">
-                                    <div><h4 className="font-medium">Daily Cloud Backups</h4><p className="text-muted text-sm">Automatically backup system logs and ML data to the cloud.</p></div>
-                                    <label className="toggle-switch"><input type="checkbox" defaultChecked /><span className="slider round"></span></label>
+
+                            {/* System Activity Logs Section */}
+                            <div className="settings-card p-6" style={{ gridColumn: '1 / -1' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h3 className="section-title"><Database size={20} /> System Activity Logs</h3>
+                                        <p className="text-muted text-sm mt-1">Track user actions, ML predictions, and security events secretly in the backend.</p>
+                                    </div>
+                                    <label className="toggle-switch">
+                                        <input type="checkbox" checked={logsEnabled} onChange={handleLogsToggle} />
+                                        <span className="slider round"></span>
+                                    </label>
                                 </div>
+
+                                {logsEnabled && (
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '24px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+                                        <button className="btn-primary" onClick={() => setLogDownloadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Download size={18} /> Export Activity Logs
+                                        </button>
+                                        <button className="btn-cancel" onClick={() => setClearLogsModal(true)} style={{ backgroundColor: '#fef2f2', color: '#ef4444', borderColor: '#fecaca', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Trash2 size={18} /> Clear All Logs
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="settings-card p-6">
@@ -373,17 +500,17 @@ function Settings() {
                         </div>
                         <form onSubmit={handleSaveUser}>
                             <div className="modal-body">
-                                <div className="form-group"><label>Full Name</label><input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} /></div>
-                                <div className="form-group"><label>Email Address</label><input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} /></div>
+                                <div className="form-group"><label>Full Name</label><input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+                                <div className="form-group"><label>Email Address</label><input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
                                 {modalMode === 'add' && (
                                     <div className="form-row">
-                                        <div className="form-group"><label>Password</label><input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} /></div>
-                                        <div className="form-group"><label>Confirm Password</label><input type="password" required value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} /></div>
+                                        <div className="form-group"><label>Password</label><input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} /></div>
+                                        <div className="form-group"><label>Confirm Password</label><input type="password" required value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} /></div>
                                     </div>
                                 )}
                                 <div className="form-row">
-                                    <div className="form-group"><label>System Role</label><select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}><option>Technician</option><option>Admin</option></select></div>
-                                    <div className="form-group"><label>Account Status</label><select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}><option>Active</option><option>Inactive</option></select></div>
+                                    <div className="form-group"><label>System Role</label><select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}><option>Technician</option><option>Admin</option></select></div>
+                                    <div className="form-group"><label>Account Status</label><select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}><option>Active</option><option>Inactive</option></select></div>
                                 </div>
                             </div>
                             <div className="modal-footer">
@@ -395,7 +522,7 @@ function Settings() {
                 </div>
             )}
 
-            {/* Delete Modal */}
+            {/* User Delete Confirm Modal */}
             {deleteConfirm.isOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '32px 24px' }}>
@@ -410,33 +537,73 @@ function Settings() {
                 </div>
             )}
 
+            {/* Clear Logs Confirm Modal */}
+            {clearLogsModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '32px 24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><div style={{ background: '#fef2f2', padding: '16px', borderRadius: '50%' }}><AlertTriangle size={36} color="#ef4444" /></div></div>
+                        <h3 style={{ marginBottom: '12px', color: '#111827', fontSize: '1.25rem' }}>Clear All System Logs?</h3>
+                        <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>Are you absolutely sure you want to permanently delete all system activity logs? This action cannot be reversed.</p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button className="btn-cancel" style={{ flex: 1 }} onClick={() => setClearLogsModal(false)} disabled={isClearingLogs}>Cancel</button>
+                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#ef4444', borderColor: '#ef4444' }} onClick={executeClearLogs} disabled={isClearingLogs}>
+                                {isClearingLogs ? <Loader2 size={16} className="spin-animation" /> : 'Yes, Clear Logs'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Log Download Selection Modal */}
+            {logDownloadModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '32px 24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                            <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '50%' }}>
+                                <Download size={36} color="#3b82f6" />
+                            </div>
+                        </div>
+                        <h3 style={{ marginBottom: '8px' }}>Export System Logs</h3>
+                        <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '0.9rem' }}>
+                            Choose a file format to download the complete system activity logs.
+                        </p>
+
+                        <div style={{ backgroundColor: '#fffbeb', color: '#b45309', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '20px', textAlign: 'left', border: '1px solid #fde68a' }}>
+                            <strong>Note:</strong> If the logs contain Sinhala names, please download as <strong>CSV</strong>. PDF does not support Sinhala fonts correctly.
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={() => executeDownloadLogs('CSV')} disabled={isGeneratingLogs}>
+                                {isGeneratingLogs ? <Loader2 size={16} className="spin-animation" /> : 'Download CSV'}
+                            </button>
+                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#ef4444', borderColor: '#ef4444' }} onClick={() => executeDownloadLogs('PDF')} disabled={isGeneratingLogs}>
+                                {isGeneratingLogs ? <Loader2 size={16} className="spin-animation" /> : 'Download PDF'}
+                            </button>
+                        </div>
+                        <button className="btn-cancel" style={{ width: '100%', marginTop: '12px' }} onClick={() => setLogDownloadModal(false)} disabled={isGeneratingLogs}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* 2FA Setup Modal with Recovery Code Download */}
             {is2FAModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center' }}>
                         <div className="modal-header">
                             <h3>Set Up Authenticator</h3>
-                            <button className="close-btn" onClick={() => {
-                                setIs2FAModalOpen(false);
-                                setIs2FAEnabled(false); // If they cancel, uncheck the toggle
-                            }}>
-                                <X size={20} />
-                            </button>
+                            <button className="close-btn" onClick={() => { setIs2FAModalOpen(false); setIs2FAEnabled(false); }}><X size={20} /></button>
                         </div>
                         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <p style={{ marginBottom: '16px', color: '#4b5563', fontSize: '0.95rem' }}>
                                 1. Scan this QR code using <strong>Google Authenticator</strong> or any 2FA app on your phone.
                             </p>
-                            
+
                             <div style={{ background: '#f9fafb', padding: '20px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '16px', display: 'flex', justifyContent: 'center', width: '100%' }}>
-                                {qrUri ? (
-                                    <QRCodeSVG value={qrUri} size={180} level="M" />
-                                ) : (
-                                    <div style={{ height: '180px', display: 'flex', alignItems: 'center', color: '#9ca3af' }}>Loading QR Code...</div>
-                                )}
+                                {qrUri ? <QRCodeSVG value={qrUri} size={180} level="M" /> : <div style={{ height: '180px', display: 'flex', alignItems: 'center', color: '#9ca3af' }}>Loading QR Code...</div>}
                             </div>
 
-                            {/* Recovery Code Download Alert */}
                             <div style={{ background: '#fef3c7', padding: '12px', borderRadius: '8px', border: '1px solid #fde68a', marginBottom: '24px', textAlign: 'left', width: '100%' }}>
                                 <p style={{ fontSize: '0.85rem', color: '#92400e', marginBottom: '8px' }}>
                                     <strong>Important:</strong> Save your recovery code. If you lose your phone, you will need this code to restore access.
@@ -449,24 +616,13 @@ function Settings() {
                             <p style={{ marginBottom: '12px', color: '#4b5563', fontSize: '0.95rem' }}>
                                 2. Enter the 6-digit code generated by your app to verify.
                             </p>
-                            
+
                             <form onSubmit={handleVerify2FA} style={{ width: '100%' }}>
-                                <input 
-                                    type="text"
-                                    className="settings-otp-input"
-                                    placeholder="000 000"
-                                    maxLength="6"
-                                    required
-                                    value={otpCode}
-                                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                />
+                                <input type="text" className="settings-otp-input" placeholder="000 000" maxLength="6" required value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} />
                                 <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                                    <button type="button" className="btn-cancel" style={{ flex: 1 }} onClick={() => {
-                                        setIs2FAModalOpen(false);
-                                        setIs2FAEnabled(false);
-                                    }}>Cancel</button>
+                                    <button type="button" className="btn-cancel" style={{ flex: 1 }} onClick={() => { setIs2FAModalOpen(false); setIs2FAEnabled(false); }}>Cancel</button>
                                     <button type="submit" className="btn-primary" style={{ flex: 1, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} disabled={isVerifying2FA || otpCode.length < 6}>
-                                        {isVerifying2FA ? 'Verifying...' : 'Verify & Enable'}
+                                        {isVerifying2FA ? <Loader2 size={16} className="spin-animation" /> : 'Verify & Enable'}
                                     </button>
                                 </div>
                             </form>
