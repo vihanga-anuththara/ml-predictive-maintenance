@@ -31,7 +31,7 @@ function Settings() {
     const [autoLogout, setAutoLogout] = useState(localStorage.getItem('autoLogout') !== 'false');
 
     // 2FA States
-    const [is2FAEnabled, setIs2FAEnabled] = useState(localStorage.getItem('is2faEnabled') === 'true');
+    const [is2FAEnabled, setIs2FAEnabled] = useState(false);
     const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
     const [qrUri, setQrUri] = useState('');
     const [setupSecret, setSetupSecret] = useState('');
@@ -45,11 +45,18 @@ function Settings() {
     const [isGeneratingLogs, setIsGeneratingLogs] = useState(false);
     const [isClearingLogs, setIsClearingLogs] = useState(false);
 
+    // Notification Preferences States
+    const [emailAlerts, setEmailAlerts] = useState(true);
+    const [weeklyReports, setWeeklyReports] = useState(true);
+    const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+
     const showToast = (type, title, message) => {
         setNotification({ type, title, message });
         setTimeout(() => setNotification(null), 4000);
     };
 
+    // Effects
+    // Auto Logout Effect
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token) { navigate('/'); return; }
@@ -78,14 +85,51 @@ function Settings() {
         };
     }, [autoLogout, navigate]);
 
+    // Fetch Users Effect
+    useEffect(() => {
+        if (currentRole === 'Admin') fetchUsers();
+    }, [currentRole]);
+
+    // Fetch Notification Preferences Effect
+    useEffect(() => {
+        const fetchPreferences = async () => {
+            try {
+                const res = await api.get('/my-preferences/');
+                setEmailAlerts(res.data.email_alerts);
+                setWeeklyReports(res.data.weekly_reports);
+            } catch (error) {
+                console.error("Failed to load preferences");
+            }
+        };
+        if (localStorage.getItem('accessToken')) {
+            fetchPreferences();
+        }
+    }, []);
+
+    // Check 2FA Status Effect
+    useEffect(() => {
+        const fetchSecurityStatus = async () => {
+            try {
+                const response = await api.get('/check-2fa-status/');
+                setIs2FAEnabled(response.data.is_2fa_enabled);
+                localStorage.setItem('is2faEnabled', response.data.is_2fa_enabled);
+            } catch (error) {
+                console.error("Could not fetch 2FA status");
+            }
+        };
+
+        if (activeTab === 'security') {
+            fetchSecurityStatus();
+        }
+    }, [activeTab]);
+
+    // Functions
     const handleAutoLogoutToggle = (e) => {
         const isEnabled = e.target.checked;
         setAutoLogout(isEnabled);
         localStorage.setItem('autoLogout', isEnabled);
         showToast('success', 'Security Updated', `Auto Logout is now ${isEnabled ? 'Enabled' : 'Disabled'}.`);
     };
-
-    useEffect(() => { if (currentRole === 'Admin') fetchUsers(); }, [currentRole]);
 
     const fetchUsers = async () => {
         try {
@@ -169,6 +213,7 @@ function Settings() {
         }
     };
 
+    // 2FA Functions
     const handle2FAToggle = async (e) => {
         const turnOn = e.target.checked;
         if (turnOn) {
@@ -229,7 +274,7 @@ function Settings() {
         showToast('success', 'Downloaded', 'Recovery code has been downloaded successfully.');
     };
 
-    // System Logs Functions 
+    // System Logs Functions
     const handleLogsToggle = (e) => {
         const isEnabled = e.target.checked;
         setLogsEnabled(isEnabled);
@@ -242,7 +287,6 @@ function Settings() {
         const today = new Date().toISOString().split('T')[0];
 
         try {
-            // Fetch logs from Backend
             const res = await api.get('/system-logs/');
             const logsData = Array.isArray(res.data) ? res.data : (res.data.results || []);
 
@@ -333,6 +377,22 @@ function Settings() {
             showToast('error', 'Clear Failed', 'Could not clear system logs.');
         } finally {
             setIsClearingLogs(false);
+        }
+    };
+
+    // Save Preferences Function
+    const handleSavePreferences = async () => {
+        setIsSavingPrefs(true);
+        try {
+            await api.put('/my-preferences/', {
+                email_alerts: emailAlerts,
+                weekly_reports: weeklyReports
+            });
+            showToast('success', 'Preferences Saved', 'Your notification settings have been updated successfully!');
+        } catch (error) {
+            showToast('error', 'Save Failed', 'Could not update preferences. Try again.');
+        } finally {
+            setIsSavingPrefs(false);
         }
     };
 
@@ -470,21 +530,43 @@ function Settings() {
                                 )}
                             </div>
 
+                            {/* Notification Preferences Section */}
                             <div className="settings-card p-6">
                                 <h3 className="section-title"><Bell size={20} /> Notification Preferences</h3>
                                 <p className="section-desc">Choose how you want to be notified about system alerts and ML predictions.</p>
                                 <div className="notification-options mt-4">
                                     <div className="toggle-section">
-                                        <div><h4 className="font-medium">Email Alerts</h4><p className="text-muted text-sm">Receive critical ML predictions via email.</p></div>
-                                        <label className="toggle-switch"><input type="checkbox" defaultChecked /><span className="slider round"></span></label>
+                                        <div>
+                                            <h4 className="font-medium">Email Alerts</h4>
+                                            <p className="text-muted text-sm">Receive critical ML predictions via email.</p>
+                                        </div>
+                                        <label className="toggle-switch">
+                                            <input type="checkbox" checked={emailAlerts} onChange={(e) => setEmailAlerts(e.target.checked)} />
+                                            <span className="slider round"></span>
+                                        </label>
                                     </div>
                                     <div className="toggle-section mt-4">
-                                        <div><h4 className="font-medium">Weekly Reports</h4><p className="text-muted text-sm">Send automated summary reports every Monday.</p></div>
-                                        <label className="toggle-switch"><input type="checkbox" defaultChecked /><span className="slider round"></span></label>
+                                        <div>
+                                            <h4 className="font-medium">Weekly Reports</h4>
+                                            <p className="text-muted text-sm">Send automated summary reports every Monday.</p>
+                                        </div>
+                                        <label className="toggle-switch">
+                                            <input type="checkbox" checked={weeklyReports} onChange={(e) => setWeeklyReports(e.target.checked)} />
+                                            <span className="slider round"></span>
+                                        </label>
                                     </div>
                                 </div>
-                                <button type="button" className="btn-primary w-full mt-6 flex-center" onClick={() => showToast('success', 'Preferences Saved', 'System preferences updated successfully!')}><Save size={18} /> Save Preferences</button>
+                                <button
+                                    type="button"
+                                    className="btn-primary w-full mt-6 flex-center"
+                                    onClick={handleSavePreferences}
+                                    disabled={isSavingPrefs}
+                                >
+                                    {isSavingPrefs ? <Loader2 size={18} className="spin-animation" /> : <Save size={18} />}
+                                    {isSavingPrefs ? ' Saving...' : ' Save Preferences'}
+                                </button>
                             </div>
+
                         </div>
                     )}
                 </div>
