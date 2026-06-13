@@ -112,6 +112,16 @@ class VerifyLoginOTPView(APIView):
         SystemLog.objects.create(user=f"{user.first_name} {user.last_name}", action="Failed 2FA attempt", status="Warning")
         return Response({"error": "Invalid Authenticator Code"}, status=status.HTTP_400_BAD_REQUEST)
 
+# 2FA Status Check
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_2fa_status(request):
+    sys_user = SystemUser.objects.filter(email=request.user.email).first()
+    if sys_user:
+        return Response({"is_2fa_enabled": sys_user.is_2fa_enabled})
+    return Response({"is_2fa_enabled": False})
+
+# 2FA Setup View (QR Code)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def setup_2fa(request):

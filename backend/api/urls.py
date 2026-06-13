@@ -3,8 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CompanyViewSet, DeviceViewSet, DeviceHealthLogViewSet, MaintenanceRecordViewSet, 
     predict_device_risk, get_device_risks, RegisterView, LoginView, ContractViewSet, TechnicianTaskViewSet, 
-    SystemUserViewSet, change_password, VerifyLoginOTPView, setup_2fa, verify_and_enable_2fa, disable_2fa,
-    SystemLogAPIView, ClearSystemLogsAPIView
+    SystemUserViewSet, change_password, VerifyLoginOTPView, setup_2fa, verify_and_enable_2fa, disable_2fa, SystemLogAPIView, ClearSystemLogsAPIView, check_2fa_status 
 )
 
 # API Router for CRUD operations
@@ -26,6 +25,7 @@ urlpatterns = [
     path('setup-2fa/', setup_2fa, name='setup-2fa'),
     path('verify-2fa/', verify_and_enable_2fa, name='verify-2fa'),
     path('disable-2fa/', disable_2fa, name='disable-2fa'),
+    path('check-2fa-status/', check_2fa_status, name='check-2fa-status'), 
     
     # ML Endpoint Links
     path('predict-risk/', predict_device_risk, name='predict-risk'),
