@@ -46,8 +46,9 @@ function Settings() {
     const [isClearingLogs, setIsClearingLogs] = useState(false);
 
     // Notification Preferences States
-    const [emailAlerts, setEmailAlerts] = useState(true);
-    const [weeklyReports, setWeeklyReports] = useState(true);
+    const [notifyTasks, setNotifyTasks] = useState(true);
+    const [notifyContracts, setNotifyContracts] = useState(true);
+    const [notifySecurity, setNotifySecurity] = useState(true);
     const [isSavingPrefs, setIsSavingPrefs] = useState(false);
 
     const showToast = (type, title, message) => {
@@ -95,8 +96,9 @@ function Settings() {
         const fetchPreferences = async () => {
             try {
                 const res = await api.get('/my-preferences/');
-                setEmailAlerts(res.data.email_alerts);
-                setWeeklyReports(res.data.weekly_reports);
+                setNotifyTasks(res.data.notify_tasks);
+                setNotifyContracts(res.data.notify_contracts);
+                setNotifySecurity(res.data.notify_security);
             } catch (error) {
                 console.error("Failed to load preferences");
             }
@@ -385,8 +387,9 @@ function Settings() {
         setIsSavingPrefs(true);
         try {
             await api.put('/my-preferences/', {
-                email_alerts: emailAlerts,
-                weekly_reports: weeklyReports
+                notify_tasks: notifyTasks,
+                notify_contracts: notifyContracts,
+                notify_security: notifySecurity
             });
             showToast('success', 'Preferences Saved', 'Your notification settings have been updated successfully!');
         } catch (error) {
@@ -533,29 +536,51 @@ function Settings() {
                             {/* Notification Preferences Section */}
                             <div className="settings-card p-6">
                                 <h3 className="section-title"><Bell size={20} /> Notification Preferences</h3>
-                                <p className="section-desc">Choose how you want to be notified about system alerts and ML predictions.</p>
+                                <p className="section-desc">Customize which system events trigger email notifications to your inbox.</p>
+
                                 <div className="notification-options mt-4">
+
+                                    {/* Task Assignments */}
                                     <div className="toggle-section">
                                         <div>
-                                            <h4 className="font-medium">Email Alerts</h4>
-                                            <p className="text-muted text-sm">Receive critical ML predictions via email.</p>
+                                            <h4 className="font-medium">New Task Assignments</h4>
+                                            <p className="text-muted text-sm">Notify me when a new maintenance task is assigned to my account.</p>
                                         </div>
                                         <label className="toggle-switch">
-                                            <input type="checkbox" checked={emailAlerts} onChange={(e) => setEmailAlerts(e.target.checked)} />
+                                            <input type="checkbox" checked={notifyTasks} onChange={(e) => setNotifyTasks(e.target.checked)} />
                                             <span className="slider round"></span>
                                         </label>
                                     </div>
-                                    <div className="toggle-section mt-4">
+
+                                    <hr style={{ border: 'none', borderTop: '1px solid #f3f4f6', margin: '16px 0' }} />
+
+                                    {/* Contract Renewals */}
+                                    <div className="toggle-section">
                                         <div>
-                                            <h4 className="font-medium">Weekly Reports</h4>
-                                            <p className="text-muted text-sm">Send automated summary reports every Monday.</p>
+                                            <h4 className="font-medium">Contract Expirations</h4>
+                                            <p className="text-muted text-sm">Receive reminders 30 days before a client's contract expires.</p>
                                         </div>
                                         <label className="toggle-switch">
-                                            <input type="checkbox" checked={weeklyReports} onChange={(e) => setWeeklyReports(e.target.checked)} />
+                                            <input type="checkbox" checked={notifyContracts} onChange={(e) => setNotifyContracts(e.target.checked)} />
+                                            <span className="slider round"></span>
+                                        </label>
+                                    </div>
+
+                                    <hr style={{ border: 'none', borderTop: '1px solid #f3f4f6', margin: '16px 0' }} />
+
+                                    {/* Security Alerts */}
+                                    <div className="toggle-section">
+                                        <div>
+                                            <h4 className="font-medium">Security & Access Alerts</h4>
+                                            <p className="text-muted text-sm">Be notified of suspicious login attempts or 2FA resets.</p>
+                                        </div>
+                                        <label className="toggle-switch">
+                                            <input type="checkbox" checked={notifySecurity} onChange={(e) => setNotifySecurity(e.target.checked)} />
                                             <span className="slider round"></span>
                                         </label>
                                     </div>
                                 </div>
+
                                 <button
                                     type="button"
                                     className="btn-primary w-full mt-6 flex-center"
@@ -669,7 +694,7 @@ function Settings() {
                 </div>
             )}
 
-            {/* 2FA Setup Modal with Recovery Code Download */}
+            {/* 2FA Setup Modal */}
             {is2FAModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '420px', textAlign: 'center' }}>
