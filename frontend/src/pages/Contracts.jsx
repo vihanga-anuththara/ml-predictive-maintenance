@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import './Contracts.css';
 import { Search, Plus, Edit, Trash2, FileSignature, X, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 function Contracts() {
-    const navigate = useNavigate(); 
-    const currentRole = localStorage.getItem('userRole') || 'Technician'; 
+    const navigate = useNavigate();
+    const currentRole = localStorage.getItem('userRole') || 'Technician';
 
     const [contracts, setContracts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState('add'); 
-    
+    const [modalMode, setModalMode] = useState('add');
+
     const [formData, setFormData] = useState({
         id: '', displayId: '', company: '', email: '', startDate: '', endDate: '', value: ''
     });
@@ -29,18 +29,18 @@ function Contracts() {
     // Calculation Status
     const calculateStatus = (endDateString) => {
         if (!endDateString) return 'Unknown';
-        
+
         // Today (00:00:00)
-        const today = new Date(); 
-        today.setHours(0, 0, 0, 0); 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
         // End date (00:00:00)
         const endDate = new Date(endDateString);
         endDate.setHours(0, 0, 0, 0);
 
         // Calculate days
-        const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)); 
-        
+        const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
         if (diffDays < 0) return 'Expired';       // Days<0  Expired
         if (diffDays === 0) return 'Expires Today'; // Expires today
         if (diffDays <= 30) return 'Expiring Soon'; // Days <30 Expiring soon
@@ -51,14 +51,14 @@ function Contracts() {
         const token = localStorage.getItem('accessToken');
         if (!token) { navigate('/'); return; }
         if (currentRole === 'Admin') fetchContracts();
-    }, [currentRole, navigate]); 
+    }, [currentRole, navigate]);
 
     const fetchContracts = async () => {
         try {
             const response = await api.get('/contracts/');
             setContracts(response.data.map(cont => ({
                 id: cont.id, displayId: `CONT-100${cont.id}`, company: cont.company,
-                email: cont.contact_email || '', startDate: cont.start_date, endDate: cont.end_date,   
+                email: cont.contact_email || '', startDate: cont.start_date, endDate: cont.end_date,
                 value: cont.value, status: calculateStatus(cont.end_date)
             })));
         } catch (error) {
@@ -70,7 +70,7 @@ function Contracts() {
 
     const handleAddClick = () => { setModalMode('add'); setFormData({ id: '', displayId: '', company: '', email: '', startDate: '', endDate: '', value: '' }); setIsModalOpen(true); };
     const handleEditClick = (contract) => { setModalMode('edit'); setFormData(contract); setIsModalOpen(true); };
-    
+
     const confirmDelete = (id) => setDeleteConfirm({ isOpen: true, contractId: id });
     const executeDelete = async () => {
         const id = deleteConfirm.contractId;
@@ -94,7 +94,7 @@ function Contracts() {
             } else {
                 await api.put(`/contracts/${formData.id}/`, payload); showToast('success', 'Contract Updated', 'Contract details updated!');
             }
-            setIsModalOpen(false); fetchContracts(); 
+            setIsModalOpen(false); fetchContracts();
         } catch (error) { showToast('error', 'Save Failed', 'An error occurred while saving.'); }
     };
 
@@ -109,10 +109,10 @@ function Contracts() {
                             <p>Manage client agreements, billing cycles, and renewals.</p>
                         </div>
                         {currentRole === 'Admin' && (
-                             <button className="btn-primary" onClick={handleAddClick}><Plus size={18} /> Add Contract</button>
+                            <button className="btn-primary" onClick={handleAddClick}><Plus size={18} /> Add Contract</button>
                         )}
                     </div>
-                    
+
                     {currentRole !== 'Admin' ? (
                         <div className="restricted-view" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', background: '#fff', borderRadius: '12px', marginTop: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                             <ShieldAlert size={64} color="#ef4444" />
@@ -162,16 +162,16 @@ function Contracts() {
                         <div className="modal-header"><h3>{modalMode === 'add' ? 'Add Contract' : 'Edit Contract'}</h3><button className="close-btn" onClick={() => setIsModalOpen(false)}><X size={20} /></button></div>
                         <form onSubmit={handleSave}>
                             <div className="modal-body">
-                                <div className="form-group"><label>Company Name</label><input type="text" required value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} /></div>
-                                <div className="form-group"><label>Email</label><input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} /></div>
+                                <div className="form-group"><label>Company Name</label><input type="text" required value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} /></div>
+                                <div className="form-group"><label>Email</label><input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
                                 <div className="form-row">
-                                    <div className="form-group"><label>Start Date</label><input type="date" required value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} /></div>
-                                    <div className="form-group"><label>End Date</label><input type="date" required value={formData.endDate} onChange={(e) => setFormData({...formData, endDate: e.target.value})} /></div>
+                                    <div className="form-group"><label>Start Date</label><input type="date" required value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} /></div>
+                                    <div className="form-group"><label>End Date</label><input type="date" required value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} /></div>
                                 </div>
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label>Contract Value</label>
-                                        <input type="text" placeholder="e.g. LKR 10,000" required value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} />
+                                        <input type="text" placeholder="e.g. LKR 10,000" required value={formData.value} onChange={(e) => setFormData({ ...formData, value: e.target.value })} />
                                     </div>
                                 </div>
                             </div>
@@ -184,7 +184,7 @@ function Contracts() {
             {deleteConfirm.isOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center', padding: '32px 24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><div style={{ background: '#fef2f2', padding: '16px', borderRadius: '50%' }}><AlertTriangle size={36} color="#ef4444" /></div></div>
+                        <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto 16px' }}><div style={{ background: '#fef2f2', padding: '16px', borderRadius: '50%' }}><AlertTriangle size={36} color="#ef4444" /></div></div>
                         <h3 style={{ marginBottom: '12px' }}>Delete Contract?</h3>
                         <p style={{ color: '#6b7280', marginBottom: '24px' }}>Are you sure you want to delete this contract? This action cannot be undone.</p>
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
