@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertTriangle, X, Eye, EyeOff, ShieldCheck, KeyRound } from 'lucide-react';
+import api from '../services/api';
 import './Login.css';
 
 function Login() {
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // Sign In State
-    const [username, setUsername] = useState(''); 
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    
+
     // 2FA (OTP) States
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [otpCode, setOtpCode] = useState('');
     const [loginEmail, setLoginEmail] = useState('');
-    
+
     // Recovery Mode State
     const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
@@ -34,11 +34,11 @@ function Login() {
         setIsLoading(true);
 
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/login/', {
-                username: username, 
+            const response = await api.post('/login/', {
+                username: username,
                 password: password
             });
-            
+
             // If 2FA enabled, request OTP
             if (response.data.message === 'OTP_REQUIRED') {
                 setLoginEmail(response.data.email);
@@ -53,10 +53,10 @@ function Login() {
             // Redirect to Dashboard
             localStorage.setItem('accessToken', response.data.access);
             localStorage.setItem('refreshToken', response.data.refresh);
-            localStorage.setItem('username', response.data.name || username); 
+            localStorage.setItem('username', response.data.name || username);
             localStorage.setItem('userRole', response.data.role || 'Technician');
-            
-            navigate('/dashboard'); 
+
+            navigate('/dashboard');
 
         } catch (error) {
             console.error("Login Error:", error);
@@ -75,7 +75,7 @@ function Login() {
         setIsLoading(true);
 
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/login-verify-otp/', {
+            const response = await api.post('/login-verify-otp/', {
                 email: loginEmail,
                 code: otpCode.trim() // Remove Spaces 
             });
@@ -83,11 +83,11 @@ function Login() {
             // Redirect to Dashboard
             localStorage.setItem('accessToken', response.data.access);
             localStorage.setItem('refreshToken', response.data.refresh);
-            localStorage.setItem('username', response.data.name || username); 
+            localStorage.setItem('username', response.data.name || username);
             localStorage.setItem('userRole', response.data.role || 'Technician');
-            
+
             setShowOtpModal(false);
-            
+
             // If logged using recovery code, display a message.
             if (isRecoveryMode) {
                 setTimeout(() => {
@@ -95,7 +95,7 @@ function Login() {
                 }, 1000);
             }
 
-            navigate('/dashboard'); 
+            navigate('/dashboard');
 
         } catch (error) {
             console.error("OTP Error:", error);
@@ -167,8 +167,8 @@ function Login() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
                                     />
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         className="password-toggle"
                                         onClick={() => setShowPassword(!showPassword)}
                                         aria-label="Toggle password visibility"
@@ -195,29 +195,29 @@ function Login() {
                                 {isRecoveryMode ? <KeyRound size={36} color="#d97706" /> : <ShieldCheck size={36} color="#3b82f6" />}
                             </div>
                         </div>
-                        
+
                         <h3 style={{ marginBottom: '8px', fontSize: '1.25rem', color: '#111827', textAlign: 'center' }}>
                             {isRecoveryMode ? 'Recovery Mode' : 'Two-Factor Authentication'}
                         </h3>
-                        
+
                         <p style={{ color: '#6b7280', marginBottom: '20px', fontSize: '0.9rem', textAlign: 'center' }}>
-                            {isRecoveryMode 
-                                ? 'Enter your emergency recovery code to regain access.' 
+                            {isRecoveryMode
+                                ? 'Enter your emergency recovery code to regain access.'
                                 : 'Enter the 6-digit code from your authenticator app.'}
                         </p>
-                        
+
                         <form onSubmit={handleVerifyOtp}>
                             {isRecoveryMode ? (
-                                <input 
+                                <input
                                     type="text"
                                     className="login-recovery-input"
                                     placeholder="Enter your long recovery code"
                                     required
                                     value={otpCode}
-                                    onChange={(e) => setOtpCode(e.target.value)} 
+                                    onChange={(e) => setOtpCode(e.target.value)}
                                 />
                             ) : (
-                                <input 
+                                <input
                                     type="text"
                                     className="login-otp-input"
                                     placeholder="000000"
@@ -227,11 +227,11 @@ function Login() {
                                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} // Only numbers
                                 />
                             )}
-                            
+
                             {/* Switch Mode Button */}
                             <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     className="recovery-toggle-btn"
                                     onClick={() => {
                                         setIsRecoveryMode(!isRecoveryMode);
@@ -243,9 +243,9 @@ function Login() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                                <button 
-                                    type="button" 
-                                    className="btn-cancel" 
+                                <button
+                                    type="button"
+                                    className="btn-cancel"
                                     style={{ flex: 1 }}
                                     onClick={() => {
                                         setShowOtpModal(false);
@@ -255,9 +255,9 @@ function Login() {
                                 >
                                     Cancel
                                 </button>
-                                <button 
-                                    type="submit" 
-                                    className="btn-primary" 
+                                <button
+                                    type="submit"
+                                    className="btn-primary"
                                     style={{ flex: 1, marginTop: 0 }}
                                     disabled={isLoading || (isRecoveryMode ? otpCode.length < 10 : otpCode.length < 6)}
                                 >
