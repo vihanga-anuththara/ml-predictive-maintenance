@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CompanyViewSet, DeviceViewSet, DeviceHealthLogViewSet, MaintenanceRecordViewSet, 
     predict_device_risk, get_device_risks, RegisterView, LoginView, ContractViewSet, TechnicianTaskViewSet, 
-    SystemUserViewSet, change_password, VerifyLoginOTPView, setup_2fa, verify_and_enable_2fa, disable_2fa, SystemLogAPIView, ClearSystemLogsAPIView, check_2fa_status 
+    SystemUserViewSet, change_password, VerifyLoginOTPView, setup_2fa, verify_and_enable_2fa, disable_2fa, 
+    SystemLogAPIView, ClearSystemLogsAPIView, check_2fa_status, user_preferences, trash_manager
 )
 
 # API Router for CRUD operations
@@ -17,7 +18,7 @@ router.register(r'tasks', TechnicianTaskViewSet)
 router.register(r'system-users', SystemUserViewSet)
 
 urlpatterns = [
-    # Auth Links
+    # Authentication and Security Links
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('login-verify-otp/', VerifyLoginOTPView.as_view(), name='login-verify-otp'),
@@ -26,6 +27,10 @@ urlpatterns = [
     path('verify-2fa/', verify_and_enable_2fa, name='verify-2fa'),
     path('disable-2fa/', disable_2fa, name='disable-2fa'),
     path('check-2fa-status/', check_2fa_status, name='check-2fa-status'), 
+    path('trash/', trash_manager, name='trash_manager'),
+    
+    # User Preferences Link (New Notification Settings)
+    path('my-preferences/', user_preferences, name='my-preferences'),
     
     # ML Endpoint Links
     path('predict-risk/', predict_device_risk, name='predict-risk'),
