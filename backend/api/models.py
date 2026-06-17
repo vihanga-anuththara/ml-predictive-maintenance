@@ -4,16 +4,21 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django_cryptography.fields import encrypt
 
-# Users create from Settings
+# Users created from Settings
 class SystemUser(models.Model):
     name = models.CharField(max_length=150)
     email = models.EmailField(unique=True) 
     role = models.CharField(max_length=50, default='Technician')
     status = models.CharField(max_length=50, default='Active')
     
-    # 2Fa model
+    # 2FA model
     totp_secret = models.CharField(max_length=32, blank=True, null=True) 
     is_2fa_enabled = models.BooleanField(default=False)
+
+    # Notification Preferences
+    notify_tasks = models.BooleanField(default=True)
+    notify_contracts = models.BooleanField(default=True)
+    notify_security = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name} ({self.role})"
@@ -21,9 +26,13 @@ class SystemUser(models.Model):
 # Company model
 class Company(models.Model):
     name = models.CharField(max_length=255)
-    # Encrypt Clients' Email
+    # Encrypted Clients' Email
     contact_email = encrypt(models.EmailField()) 
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Soft Delete Fields (Trash Feature)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -33,9 +42,13 @@ class Contract(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='contracts')
     start_date = models.DateField()
     end_date = models.DateField()
-    # Encrypt value
+    # Encrypted value
     value = encrypt(models.CharField(max_length=100)) 
     status = models.CharField(max_length=50, default='Active')
+    
+    # Soft Delete Fields (Trash Feature)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.company.name} - Contract"
@@ -51,9 +64,13 @@ class Device(models.Model):
     name = models.CharField(max_length=255)
     device_type = models.CharField(max_length=50, choices=DEVICE_TYPES) 
     installed_date = models.DateField()
-    # Encrypt serial number
+    # Encrypted serial number
     serial_number = encrypt(models.CharField(max_length=100, blank=True, null=True)) 
     status = models.CharField(max_length=50, default="Healthy")
+    
+    # Soft Delete Fields (Trash Feature)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.company.name})"
@@ -93,8 +110,12 @@ class TechnicianTask(models.Model):
     deadline = models.DateField()
     status = models.CharField(max_length=50, default='Pending')
     issue = models.TextField()
-    # Encrypt notes
+    # Encrypted notes
     special_note = encrypt(models.TextField(blank=True, null=True)) 
+    
+    # Soft Delete Fields (Trash Feature)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Task for {self.technician.name} on {self.device.name}"
@@ -117,7 +138,7 @@ class SystemLog(models.Model):
     def __str__(self):
         return f"{self.timestamp} - {self.user} - {self.action}"
 
-# Django Signal to create SystemUser profile
+# Django Signal to create SystemUser profile automatically
 @receiver(post_save, sender=User)
 def create_system_user(sender, instance, created, **kwargs):
     if created:
