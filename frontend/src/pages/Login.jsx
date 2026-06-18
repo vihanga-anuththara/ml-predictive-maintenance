@@ -50,13 +50,18 @@ function Login() {
                 return;
             }
 
-            // Redirect to Dashboard
-            localStorage.setItem('accessToken', response.data.access);
-            localStorage.setItem('refreshToken', response.data.refresh);
-            localStorage.setItem('username', response.data.name || username);
-            localStorage.setItem('userRole', response.data.role || 'Technician');
+            if (response.data && response.data.access) {
+                // Redirect to Dashboard
+                localStorage.setItem('accessToken', response.data.access);
+                localStorage.setItem('refreshToken', response.data.refresh);
+                localStorage.setItem('username', response.data.name || username);
+                localStorage.setItem('userRole', response.data.role || 'Technician');
 
-            navigate('/dashboard');
+                navigate('/dashboard');
+            } else {
+                showToast('error', 'Login Failed', 'Invalid credentials or account not active.');
+                setIsLoading(false);
+            }
 
         } catch (error) {
             console.error("Login Error:", error);
@@ -80,22 +85,26 @@ function Login() {
                 code: otpCode.trim() // Remove Spaces 
             });
 
-            // Redirect to Dashboard
-            localStorage.setItem('accessToken', response.data.access);
-            localStorage.setItem('refreshToken', response.data.refresh);
-            localStorage.setItem('username', response.data.name || username);
-            localStorage.setItem('userRole', response.data.role || 'Technician');
+            if (response.data && response.data.access) {
+                // Redirect to Dashboard
+                localStorage.setItem('accessToken', response.data.access);
+                localStorage.setItem('refreshToken', response.data.refresh);
+                localStorage.setItem('username', response.data.name || username);
+                localStorage.setItem('userRole', response.data.role || 'Technician');
 
-            setShowOtpModal(false);
+                setShowOtpModal(false);
 
-            // If logged using recovery code, display a message.
-            if (isRecoveryMode) {
-                setTimeout(() => {
-                    alert("You logged in using a Recovery Code. Please go to Settings and reset your 2FA to secure your account.");
-                }, 1000);
+                // If logged using recovery code, display a message.
+                if (isRecoveryMode) {
+                    setTimeout(() => {
+                        alert("You logged in using a Recovery Code. Please go to Settings and reset your 2FA to secure your account.");
+                    }, 1000);
+                }
+
+                navigate('/dashboard');
+            } else {
+                showToast('error', 'Verification Failed', 'Invalid OTP or Recovery Code.');
             }
-
-            navigate('/dashboard');
 
         } catch (error) {
             console.error("OTP Error:", error);
