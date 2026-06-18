@@ -28,9 +28,13 @@ def send_security_alert_email(user_email, user_name, action_title, action_desc):
         try:
             subject = f"Security Alert: {action_title}"
             message = f"Hello {user_name},\n\nThis is an automated security alert from your Predictive Maintenance System.\n\nEvent: {action_desc}\n\nIf you did not perform this action, please contact the System Administrator immediately to secure your account.\n\nBest Regards,\nSystem Administrator"
-            send_mail(subject, message, getattr(settings, 'EMAIL_HOST_USER', ''), [user_email], fail_silently=True)
+            
+            send_mail(subject, message, getattr(settings, 'EMAIL_HOST_USER', ''), [user_email], fail_silently=False)
+            print(f"Security email sent successfully to {user_email}!")
+            
         except Exception as e:
-            print(f"Email failed: {e}")
+            print(f"CRITICAL SECURITY EMAIL ERROR: {str(e)}")
+            
     threading.Thread(target=send).start()
 
 # Authentication and User Management Views
@@ -341,10 +345,13 @@ class TechnicianTaskViewSet(viewsets.ModelViewSet):
                         message, 
                         getattr(settings, 'EMAIL_HOST_USER', ''), 
                         [technician.email], 
-                        fail_silently=True
+                        fail_silently=False
                     )
+                    print(f"Task email sent successfully to {technician.email}!")
+                else:
+                    print(f"Email not sent: Technician has no email or notifications are OFF.")
             except Exception as e:
-                print(f"Error sending task email: {e}")
+                print(f"CRITICAL TASK EMAIL ERROR: {str(e)}")
         
         # Process the email in background
         threading.Thread(target=send_email).start()
