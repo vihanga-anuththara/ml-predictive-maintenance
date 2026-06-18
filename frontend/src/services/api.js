@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// Base URL 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://ml-predictive-maintenance-server-wgt5.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -22,8 +21,12 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Error 401 (Unauthorized)
-        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+        if (
+            error.response &&
+            error.response.status === 401 &&
+            !originalRequest._retry &&
+            !originalRequest.url.includes('/login')
+        ) {
             originalRequest._retry = true;
 
             try {
