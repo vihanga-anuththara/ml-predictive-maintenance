@@ -181,8 +181,21 @@ function Settings() {
         e.preventDefault();
         try {
             if (modalMode === 'add') {
-                if (formData.password !== formData.confirmPassword) { showToast('error', 'Validation Error', 'Passwords do not match!'); return; }
-                if (formData.password.length < 6) { showToast('error', 'Validation Error', 'Password must be at least 6 characters long.'); return; }
+                if (formData.password !== formData.confirmPassword) {
+                    showToast('error', 'Validation Error', 'Passwords do not match!');
+                    return;
+                }
+                if (formData.password.length < 8) {
+                    showToast('error', 'Validation Error', 'Password must be at least 8 characters long.');
+                    return;
+                }
+
+                // Ensure the password contains both letters and numbers
+                const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+                if (!passwordRegex.test(formData.password)) {
+                    showToast('error', 'Weak Password', 'Password must include BOTH letters and numbers!');
+                    return;
+                }
 
                 const nameParts = formData.name.trim().split(' ');
                 const registerPayload = {
@@ -204,8 +217,22 @@ function Settings() {
     };
 
     const handlePasswordUpdate = async () => {
-        if (!passwords.current || !passwords.new || !passwords.confirm) { showToast('error', 'Validation Error', 'Please fill all password fields.'); return; }
-        if (passwords.new !== passwords.confirm) { showToast('error', 'Validation Error', 'New passwords do not match!'); return; }
+        if (!passwords.current || !passwords.new || !passwords.confirm) {
+            showToast('error', 'Validation Error', 'Please fill all password fields.');
+            return;
+        }
+        if (passwords.new !== passwords.confirm) {
+            showToast('error', 'Validation Error', 'New passwords do not match!');
+            return;
+        }
+
+        // Ensure the new password contains both letters and numbers
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+        if (!passwordRegex.test(passwords.new)) {
+            showToast('error', 'Weak Password', 'New password must include BOTH letters and numbers (e.g. User1234).');
+            return;
+        }
+
         try {
             await api.post('/change-password/', { current: passwords.current, new: passwords.new });
             showToast('success', 'Security Updated', 'Password successfully updated!');
