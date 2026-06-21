@@ -80,3 +80,7 @@ To run this project locally, you need to set up the following environment variab
 ## Author
 
 Developed as a comprehensive solution for proactive hardware management, AI-driven risk analysis, and automated system monitoring.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
