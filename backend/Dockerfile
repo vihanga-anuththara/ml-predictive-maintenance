@@ -21,6 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend to server
 COPY . /app/
 
+# Run ML Data Generation & Model Training
+RUN python generate_data.py
+RUN python train_model.py
+
 # Expose port
 EXPOSE 8000
 
