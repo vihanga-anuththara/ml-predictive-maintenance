@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
-import api from '../services/api'; 
+import api from '../services/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Reports.css';
-import { 
-    FileText, Download, Calendar, Activity, 
-    CheckCircle2, AlertTriangle, X, Trash2, 
-    ClipboardList, FileSignature, MonitorSmartphone, Users, Loader2 
+import {
+    FileText, Download, Calendar, Activity,
+    CheckCircle2, AlertTriangle, X, Trash2,
+    ClipboardList, FileSignature, MonitorSmartphone, Users, Loader2
 } from 'lucide-react';
 
 function Reports() {
-    const [recentReports, setRecentReports] = useState([]);
-    const [notification, setNotification] = useState(null);
+    // Initialize state from local storage to prevent auto-clearing on refresh
+    const [recentReports, setRecentReports] = useState(() => {
+        const savedReports = localStorage.getItem('reportHistoryLog');
+        return savedReports ? JSON.parse(savedReports) : [];
+    });
 
+    const [notification, setNotification] = useState(null);
     const [downloadModal, setDownloadModal] = useState({ isOpen: false, reportType: '' });
-    const [isGenerating, setIsGenerating] = useState(false); 
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const showToast = (type, title, message) => {
         setNotification({ type, title, message });
@@ -24,6 +28,8 @@ function Reports() {
 
     const handleClearHistory = () => {
         setRecentReports([]);
+        // Remove the history from local storage when clearing
+        localStorage.removeItem('reportHistoryLog');
         showToast('success', 'History Cleared', 'Recent report logs have been cleared completely.');
     };
 
@@ -82,7 +88,7 @@ function Reports() {
                     };
                 });
 
-            } 
+            }
             // 2. Contracts Report Logic
             else if (type === 'Contracts') {
                 columns = [
@@ -102,7 +108,7 @@ function Reports() {
                     value: item.value || 'N/A'
                 }));
 
-            } 
+            }
             // 3. Company Devices Report Logic
             else if (type === 'Company Devices') {
                 columns = [
@@ -120,7 +126,7 @@ function Reports() {
                     status: item.status || 'N/A'
                 }));
 
-            } 
+            }
             // 4. User Management Report Logic
             else if (type === 'User Management') {
                 columns = [
@@ -158,14 +164,14 @@ function Reports() {
             // CSV Generation Logic
             if (format === 'CSV') {
                 const headers = columns.map(c => c.label).join(',');
-                const rows = finalReportData.map(item => 
+                const rows = finalReportData.map(item =>
                     columns.map(c => {
                         let val = String(item[c.key] || '');
                         val = val.replace(/"/g, '""'); // Avoid quotes
                         return `"${val}"`;
                     }).join(',')
                 ).join('\n');
-                
+
                 const csvContent = `\uFEFF${headers}\n${rows}`; // UTF-8 BOM
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const filename = `${type.replace(/\s+/g, '_').toLowerCase()}_${today}.csv`;
@@ -178,7 +184,7 @@ function Reports() {
                 link.click();
                 document.body.removeChild(link);
 
-            } 
+            }
             // PDF Generation Logic
             else if (format === 'PDF') {
                 const doc = new jsPDF();
@@ -196,7 +202,7 @@ function Reports() {
                 doc.text(`Total Records: ${finalReportData.length}`, 14, 50);
 
                 const tableHead = [columns.map(c => c.label)];
-                const tableBody = finalReportData.map(item => 
+                const tableBody = finalReportData.map(item =>
                     columns.map(c => String(item[c.key] || ''))
                 );
 
@@ -213,7 +219,7 @@ function Reports() {
                 doc.save(filename);
             }
 
-            // Update Report Logs in UI
+            // Update Report Logs in UI and save to local storage
             const newReportLog = {
                 id: newId,
                 name: `${type} Data Export`,
@@ -222,7 +228,10 @@ function Reports() {
                 generatedBy: generatedBy,
                 format: format
             };
-            setRecentReports([newReportLog, ...recentReports]);
+
+            const updatedReports = [newReportLog, ...recentReports];
+            setRecentReports(updatedReports);
+            localStorage.setItem('reportHistoryLog', JSON.stringify(updatedReports));
 
             showToast('success', 'Download Complete', `${format} file downloaded successfully.`);
             setDownloadModal({ isOpen: false, reportType: '' });
@@ -245,7 +254,7 @@ function Reports() {
 
             <main className="main-content">
                 <div className="reports-container">
-                    
+
                     <div className="page-header">
                         <div className="header-text">
                             <h2>Analytics & Reports</h2>
@@ -258,7 +267,7 @@ function Reports() {
 
                     <h3 className="section-title">Standard Reports</h3>
                     <div className="templates-grid">
-                        
+
                         <div className="template-card">
                             <div className="template-icon orange"><ClipboardList size={24} /></div>
                             <h4>Task Assignment</h4>
@@ -272,7 +281,7 @@ function Reports() {
                             <p>Overview of client service agreements and expiration data.</p>
                             <button className="generate-btn" onClick={() => openDownloadModal('Contracts')}>Generate Now</button>
                         </div>
-                        
+
                         <div className="template-card">
                             <div className="template-icon blue"><MonitorSmartphone size={24} /></div>
                             <h4>Company Devices</h4>
@@ -324,8 +333,8 @@ function Reports() {
                                                 </span>
                                             </td>
                                             <td>
-                                                <button 
-                                                    className="download-btn" 
+                                                <button
+                                                    className="download-btn"
                                                     title="Download Report"
                                                     onClick={() => handleReDownload(report)}
                                                 >
@@ -362,32 +371,32 @@ function Reports() {
                         <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '0.9rem' }}>
                             Choose a file format to generate the <strong>{downloadModal.reportType}</strong> report.
                         </p>
-                        
+
                         <div style={{ backgroundColor: '#fffbeb', color: '#b45309', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '20px', textAlign: 'left', border: '1px solid #fde68a' }}>
                             <strong>Note:</strong> If this report contains Sinhala names (e.g., Usernames or Technicians), please download as <strong>CSV</strong>. PDF does not support Sinhala fonts correctly.
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                            <button 
-                                className="btn-primary" 
-                                style={{ flex: 1, backgroundColor: '#10b981', borderColor: '#10b981' }} 
+                            <button
+                                className="btn-primary"
+                                style={{ flex: 1, backgroundColor: '#10b981', borderColor: '#10b981' }}
                                 onClick={() => executeDownloadAndLog('CSV')}
                                 disabled={isGenerating}
                             >
                                 {isGenerating ? <Loader2 size={16} className="spin-animation" /> : 'Download CSV'}
                             </button>
-                            <button 
-                                className="btn-primary" 
-                                style={{ flex: 1, backgroundColor: '#ef4444', borderColor: '#ef4444' }} 
+                            <button
+                                className="btn-primary"
+                                style={{ flex: 1, backgroundColor: '#ef4444', borderColor: '#ef4444' }}
                                 onClick={() => executeDownloadAndLog('PDF')}
                                 disabled={isGenerating}
                             >
                                 {isGenerating ? <Loader2 size={16} className="spin-animation" /> : 'Download PDF'}
                             </button>
                         </div>
-                        <button 
-                            className="btn-cancel" 
-                            style={{ width: '100%', marginTop: '12px' }} 
+                        <button
+                            className="btn-cancel"
+                            style={{ width: '100%', marginTop: '12px' }}
                             onClick={() => setDownloadModal({ isOpen: false, reportType: '' })}
                             disabled={isGenerating}
                         >
