@@ -1,0 +1,33 @@
+# Python/Django
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+db.sqbpro
+.env
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+media/
+staticfiles/
+
+# React/Node
+node_modules/
+dist/
+build/
+frontend/.env
+frontend/.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Machine Learning
+*.csv
+*.pkl
+*.h5
+
+# OS & Editors
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,98 @@
+/* Global Variables */
+:root {
+    --blue-950: #1e293b;
+    --blue-600: #2563eb;
+    --blue-400: #60a5fa;
+    --white: #ffffff;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-900: #111827;
+    --green-600: #10b981;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --transition: 0.2s ease-in-out;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--gray-50);
+    color: var(--gray-900);
+}
+
+/* Global Button Styles */
+.btn-primary {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--blue-600) !important;
+    color: var(--white) !important;
+    border: none;
+    padding: 10px 16px !important;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--transition);
+    width: fit-content !important;
+    white-space: nowrap !important;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8 !important;
+}
+
+.btn-secondary {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--white) !important;
+    color: var(--gray-700) !important;
+    border: 1px solid var(--gray-300) !important;
+    padding: 10px 16px !important;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-secondary:hover {
+    background-color: var(--gray-100) !important;
+}
+
+/* Utility Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.text-muted {
+    color: var(--gray-500);
+}
+
+.text-dark {
+    color: var(--gray-900);
+}
+
+.font-medium {
+    font-weight: 500;
+}
