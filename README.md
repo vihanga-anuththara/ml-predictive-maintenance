@@ -11,14 +11,12 @@ An advanced, full-stack predictive maintenance platform designed to monitor hard
 
 Built with a robust **Django REST Framework** backend, a responsive **React** frontend, and powered by **Google Gemini AI** and **Supabase (PostgreSQL)**.
 
-## Live Demo
+> **Note on Environment:** This project runs strictly in a **Localhost Development Environment**. Previous live cloud deployments (Vercel, Render, Supabase) have been retired to provide a consistent, reproducible offline development workflow powered by local PostgreSQL and Docker containerization.
 
-- **Frontend:** https://ml-predictive-maintenance.vercel.app
-- **Backend API:** https://ml-predictive-maintenance-server-wgt5.onrender.com/api/
+---
 
 ## Table of Contents
 
-- [Live Demo](#-live-demo)
 - [High-Level System Architecture](#high-level-system-architecture)
 - [Key Features](#key-features)
 - [Machine Learning & AI Implementation (PoC)](#machine-learning--ai-implementation-poc)
